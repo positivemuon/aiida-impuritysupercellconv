@@ -15,4 +15,21 @@ If everything is up and the musConv package installed. It can be run using the f
 
 
 
+#Available Workflows
+```
+aiida_musConv/
+└── workflows
+    ├── __init__.py
+    └── musConv.py
+```
+
+#Installation 
+install this repository as: 
+
+```
+git clone https://github.com/positivemuon/aiida-musConv.git
+cd aiida-musConv/
+pip install -e .
+```
+
 #********
