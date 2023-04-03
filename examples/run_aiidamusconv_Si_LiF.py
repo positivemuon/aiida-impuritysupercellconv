@@ -1,4 +1,4 @@
-from aiida_musConv.workflows.musConvWorkChain import musConvWorkChain
+from aiida_musConv.workflows.musConv import musConvWorkChain
 from aiida import orm
 from aiida.plugins import  DataFactory
 from aiida import load_profile
