@@ -15,7 +15,7 @@ If everything is up and the musConv package installed. It can be run using the f
 
 
 
-#Available Workflows
+# Available Workflows
 ```
 aiida_musConv/
 └── workflows
@@ -23,7 +23,7 @@ aiida_musConv/
     └── musConv.py
 ```
 
-#Installation 
+# Installation 
 install this repository as: 
 
 ```
