@@ -15,8 +15,8 @@ aiida_musConv/
     └── musConv.py
 ```
 
-## Installation 
-install this repository as: 
+## Installation
+install this repository as:
 
 ```
 git clone https://github.com/positivemuon/aiida-musConv.git
@@ -30,5 +30,3 @@ cd examples/
 python run_aiidamusconv_Si_LiF.py
 ```
 * (caveat: labels of code and pseudo have to be edited)
-
-
