@@ -169,7 +169,7 @@ class musConvWorkChain(WorkChain):
         )
 
     def init_supcell_gen(self):
-        self.ctx.n = 1
+        self.ctx.n = orm.Int(0)
 
         if self.inputs.min_length == None:
             m_l = min(self.inputs.structure.get_pymatgen_structure().lattice.abc) + 1

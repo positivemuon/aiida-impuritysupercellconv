@@ -65,10 +65,26 @@ if __name__ == "__main__":
     # results, node = run.get_node(builder)
 
     # or
+
     node = submit(builder)
     # node.exit_status #to check if the calculation was successful
-
     """
+    if node.is_finished:
+        if node.is_finished_ok:
+            print('Finished successfully')
+            res=orm.load_node(node.pk)
+            py_conv_struct=res.outputs['Converged_supercell'].get_pymatgen_structure()
+            py_conv_struct.to(filename="supercell_withmu.cif".format())
+            Sc_matrix=res.outputs['Converged_SCmatrix'].get_array('SC_matrix')
+            print(Sc_matrix)
+        else:
+            print('Excepted')
+    else:
+        if node.is_excepted:
+            print('Excepted')
+        else:
+            print ('Not Finished yet')
+
     # Get  converged supercell results with run
     #print(results) # from #results, node = run.get_node(builder)
     #py_conv_struct=results['Converged_supercell'].get_pymatgen_structure()
