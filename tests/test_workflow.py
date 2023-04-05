@@ -74,9 +74,9 @@ def generate_workchain(generate_builder):
     return _generate_workchain
 
 
-def test_setup(aiida_profile, generate_workchain):
+def test_initialize(aiida_profile, generate_workchain):
     """
-    Test `musConvWorkChain.setup`.
+    Test `musConvWorkChain.initialization`.
     This checks that we can create the workchain successfully, and that it is initialised into the correct state.
     """
     process = generate_workchain()
