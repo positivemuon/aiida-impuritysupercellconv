@@ -95,6 +95,6 @@ jobs:
     - name: Install prerequisites
       run: pip install --upgrade pip
     - name: Install
-      run: pip install -e .[testing] -v
+      run:  pip install pytest
     - name: Run tests
       run: pytest tests/
