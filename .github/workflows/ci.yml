@@ -95,6 +95,6 @@ jobs:
     - name: Install prerequisites
       run: pip install --upgrade pip
     - name: Install
-      run:  pip install pytest
+      run: pip install -e .[tests,aiida-core]
     - name: Run tests
       run: pytest tests/
