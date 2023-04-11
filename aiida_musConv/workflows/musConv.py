@@ -1,12 +1,21 @@
-from aiida import orm
-from aiida.engine import ToContext, WorkChain, calcfunction, workfunction
-from aiida.plugins import DataFactory, CalculationFactory
-from aiida.engine import run, submit
-from aiida.common.extendeddicts import AttributeDict
+# -*- coding: utf-8 -*-
 import numpy as np
-from aiida.engine import if_, while_, return_
-from musConv.supcgen import SCgenerators
+from aiida import orm
+from aiida.common.extendeddicts import AttributeDict
+from aiida.engine import (
+    ToContext,
+    WorkChain,
+    calcfunction,
+    if_,
+    return_,
+    run,
+    submit,
+    while_,
+    workfunction,
+)
+from aiida.plugins import CalculationFactory, DataFactory
 from musConv.chkconv import chkSCconvergence
+from musConv.supcgen import SCgenerators
 
 
 @calcfunction

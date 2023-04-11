@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Initialise a text database and profile for pytest."""
 import os
-import pytest
 
+import pytest
 
 pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=invalid-name
 

@@ -1,13 +1,13 @@
-from aiida_musConv.workflows.musConv import musConvWorkChain
-from aiida import orm
+# -*- coding: utf-8 -*-
+from aiida import load_profile, orm
+from aiida.engine import ToContext, run, submit
 from aiida.plugins import DataFactory
-from aiida import load_profile
-from aiida.engine import run, submit, ToContext
+
+from aiida_musConv.workflows.musConv import musConvWorkChain
 
 load_profile()
 
 from pymatgen.io.cif import CifParser
-
 
 if __name__ == "__main__":
     parser = CifParser("LiF.cif")
