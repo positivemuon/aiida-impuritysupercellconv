@@ -1,122 +1,100 @@
-name: ci
+name: CI
 
 on: [push, pull_request]
 
 jobs:
 
-    pre-commit:
+  pre-commit:
 
-        runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
-        steps:
-        -   uses: actions/checkout@v2
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.8
+    - name: Install prerequisites
+      run: pip install --upgrade pip
+    - name: Install
+      run: pip install -e .[pre-commit]
+    - name: Run pre-commit
+      run:
+        pre-commit run --all-files || ( git status --short ; git diff ; exit 1 )
 
-        -   name: Cache Python dependencies
-            uses: actions/cache@v1
-            with:
-                path: ~/.cache/pip
-                key: pip-pre-commit-${{ hashFiles('**/setup.json') }}
-                restore-keys:
-                    pip-pre-commit-
+  test-webpage-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
-        -   name: Set up Python
-            uses: actions/setup-python@v2
-            with:
-                python-version: '3.8'
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.8
+    - name: Install prerequisites
+      run: pip install --upgrade pip
+    - name: Install
+      run: pip install -e . -v
+    - name: fetch metadata
+      id: fetch_metadata
+      run: aiida-registry fetch
+    - name: make pages
+      run: aiida-registry html
 
-        -   name: Install Python dependencies
-            run: pip install -e .[pre-commit,tests]
+  install-plugins:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+      fail-fast: false
+    timeout-minutes: 55
 
-    tests:
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    # Idea: create individual conda env for every tested package
+    # - uses: goanpeca/setup-miniconda@v1
+    #   with:
+    #     # auto-update-conda: true
+    #     python-version: ${{ matrix.python-version }}
+    - name: Install prerequisites
+      run: pip install --upgrade pip
+    - name: Install
+      run: pip install -e . -v
+    - name: fetch metadata
+      run: aiida-registry fetch
 
-        runs-on: ubuntu-latest
+#     # See https://github.com/geerlingguy/raspberry-pi-dramble/issues/166
+#     - name: Force GitHub Actions' docker daemon to use vfs.
+#       run: |
+#         sudo systemctl stop docker
+#         echo '{"cgroup-parent":"/actions_job","storage-driver":"vfs"}' | sudo tee /etc/docker/daemon.json
+#         sudo systemctl start docker
 
-        strategy:
-            matrix:
-                python-version: ['3.8', '3.9', '3.10']
+    - name: Try installing packages
+      run: aiida-registry test-install
 
-        services:
-            postgres:
-                image: postgres:12
-            rabbitmq:
-                image: rabbitmq:latest
-                ports:
-                -   5672:5672
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8]
+    timeout-minutes: 5
 
-        steps:
-        -   uses: actions/checkout@v2
-
-        -   name: Cache Python dependencies
-            uses: actions/cache@v1
-            with:
-                path: ~/.cache/pip
-                key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
-                restore-keys:
-                    pip-${{ matrix.python-version }}-tests
-
-        -   name: Set up Python ${{ matrix.python-version }}
-            uses: actions/setup-python@v2
-            with:
-                python-version: ${{ matrix.python-version }}
-
-        -   name: Install Python dependencies
-            run: pip install -e .[tests]
-
-        -   name: Scan
-            run: reentry scan
-
-        -   name: Config
-            run: touch config.yml
-
-        -   name: Run pytest
-            env:
-                AIIDA_WARN_v3: 1
-            run: pytest --quiet-wipe -sv tests
-
-    integration:
-
-        runs-on: ubuntu-latest
-
-        strategy:
-            matrix:
-                python-version: ['3.10']
-
-        services:
-            postgres:
-                image: postgres:12
-                env:
-                    POSTGRES_HOST: 127.0.0.1
-                    POSTGRES_USER: postgres
-                    POSTGRES_PASSWORD: postgres
-                    POSTGRES_DB: postgres
-                ports:
-                -   5432:5432
-            rabbitmq:
-                image: rabbitmq:latest
-                ports:
-                -   5672:5672
-
-        steps:
-        -   uses: actions/checkout@v2
-
-        -   name: Cache Python dependencies
-            uses: actions/cache@v1
-            with:
-                path: ~/.cache/pip
-                key: pip-${{ matrix.python-version }}-tests-${{ hashFiles('**/setup.json') }}
-                restore-keys:
-                    pip-${{ matrix.python-version }}-tests
-
-        -   name: Set up Python ${{ matrix.python-version }}
-            uses: actions/setup-python@v2
-            with:
-                python-version: ${{ matrix.python-version }}
-
-        -   name: Install Python dependencies
-            run: pip install -e .[tests]
-
-        -   name: Scan
-            run: reentry scan
-
-        -   name: Create AiiDA profile
-            run: verdi setup -n --config .github/config/profile.yaml
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install prerequisites
+      run: pip install --upgrade pip
+    - name: Install
+      run: pip install -e .[testing] -v
+    - name: Run tests
+      run: pytest tests/
