@@ -87,4 +87,4 @@ def test_initialize(aiida_profile, generate_workchain):
     # assert process.ctx.n == 1
     assert isinstance(process.ctx.sup_struc_mu, orm.StructureData)
     assert isinstance(process.ctx.musite, orm.ArrayData)
-    assert isinstance(process.ctx.sc_matrix, orm.ArrayData)
+    assert isinstance(process.ctx.sc_mat, orm.ArrayData)
