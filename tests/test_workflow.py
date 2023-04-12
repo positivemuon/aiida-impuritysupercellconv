@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Tests for the `musConvWorkChain` class."""
+"""Tests for the `MusconvWorkChain` class."""
 import pytest
 from aiida import orm
 from aiida.engine.utils import instantiate_process
 from aiida.manage.manager import get_manager
 
-from aiida_musConv.workflows.musConv import musConvWorkChain
+from aiida_musconv.workflows.musconv import MusconvWorkChain
 
 
 @pytest.fixture
 def generate_builder(generate_structure, fixture_code):
-    """Generate default inputs for `musConvWorkChain`"""
+    """Generate default inputs for `MusconvWorkChain`"""
 
     def _get_builder():
-        """Generate default builder for `musConvWorkChain`"""
+        """Generate default builder for `MusconvWorkChain`"""
 
         inputstructure = generate_structure("Si")
         # code = fixture_code("quantumespresso.pw")
 
-        builder = musConvWorkChain.get_builder()
+        builder = MusconvWorkChain.get_builder()
         builder.structure = inputstructure
 
         paramters = {
@@ -56,7 +56,7 @@ def generate_builder(generate_structure, fixture_code):
 
 @pytest.fixture
 def generate_workchain(generate_builder):
-    """Generate an instance of musConvWorkChain"""
+    """Generate an instance of MusconvWorkChain"""
 
     def _generate_workchain(exit_code=None):
         builder = generate_builder()
@@ -65,7 +65,7 @@ def generate_workchain(generate_builder):
 
         # if exit_code is not None:
         #    node = generate_calc_job_node(
-        #    entry_point_calc_job, fixture_localhost, test_name, inputs["musConvWorkChain"]
+        #    entry_point_calc_job, fixture_localhost, test_name, inputs["MusconvWorkChain"]
         #    )
         #    node.set_process_state(ProcessState.FINISHED)
         #    node.set_exit_status(exit_code.status)
@@ -77,7 +77,7 @@ def generate_workchain(generate_builder):
 
 def test_initialize(aiida_profile, generate_workchain):
     """
-    Test `musConvWorkChain.initialization`.
+    Test `MusconvWorkChain.initialization`.
     This checks that we can create the workchain successfully,
      and that it is initialised into the correct state.
     """

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-""" AiiDa musConvWorkChain class """
+""" AiiDa MusconvWorkChain class """
 import numpy as np
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 from aiida.engine import ToContext, WorkChain, calcfunction, if_, while_
 from aiida.plugins import CalculationFactory
-from musConv.chkconv import chkSCconvergence
-from musConv.supcgen import SCgenerators
+from musconv.chkconv import chkconvergence
+from musconv.supcgen import scgenerators
 
 
 @calcfunction
@@ -15,7 +15,7 @@ def init_supcgen(aiida_struc, min_length):
     p_st = aiida_struc.get_pymatgen_structure()
 
     # Calls the supercell (SC) generation class
-    scg = SCgenerators(p_st)
+    scg = scgenerators(p_st)
     p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
 
     ad_scst = orm.StructureData(pymatgen=p_scst_mu)
@@ -39,7 +39,7 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
     mu_frac_coord = vor_site.get_array("Voronoi_site")
 
     # Calls the supercell (SC) generation class
-    scg = SCgenerators(p_st)
+    scg = scgenerators(p_st)
     p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
 
     ad_scst_out = orm.StructureData(pymatgen=p_scst_mu)
@@ -61,7 +61,7 @@ def check_if_conv_achieved(aiida_struc, traj_out):
     ase_struc = aiida_struc.get_ase()
 
     # Calls the check supercell convergence class
-    csc = chkSCconvergence(ase_struc, atm_forces)
+    csc = chkconvergence(ase_struc, atm_forces)
     cond = csc.apply_first_crit()
     cond2 = csc.apply_2nd_crit()
 
@@ -89,7 +89,7 @@ def get_kpoints(aiida_struc, k_density):
 PwCalculation = CalculationFactory("quantumespresso.pw")
 
 
-class musConvWorkChain(WorkChain):
+class MusconvWorkChain(WorkChain):
     """WorkChain for finding converged supercell for interstitial impurity calculation"""
 
     @classmethod
@@ -224,7 +224,7 @@ class musConvWorkChain(WorkChain):
             return conv_res.value == False
         except:
             self.report(
-                f"Exiting muSConvWorkChain,Error in fitting the forces of supercell,"
+                f"Exiting MusconvWorkChain,Error in fitting the forces of supercell,"
                 "iteration no. <{self.ctx.n}>) to an exponential, maybe force data not exponential"
             )
             return self.exit_codes.ERROR_FITTING_FORCES_TO_EXPONENTIAL
@@ -249,7 +249,7 @@ class musConvWorkChain(WorkChain):
     def exit_max_iteration_exceeded(self):
         """Exit code if max iteration number is reached"""
         self.report(
-            f"Exiting muSConvWorkChain, Coverged supercell NOT achieved, next iter "
+            f"Exiting MusconvWorkChain, Coverged supercell NOT achieved, next iter "
             "num <{self.ctx.n}> is greater than max iteration number {self.inputs.max_iter_num.value}"
         )
         return self.exit_codes.ERROR_NUM_CONVERGENCE_ITER_EXCEEDED

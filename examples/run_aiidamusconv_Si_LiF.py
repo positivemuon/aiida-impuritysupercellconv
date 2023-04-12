@@ -5,7 +5,7 @@ from aiida.engine import run, submit
 from aiida.plugins import DataFactory
 from pymatgen.io.cif import CifParser
 
-from aiida_musConv.workflows.musConv import musConvWorkChain
+from aiida_musconv.workflows.musconv import MusconvWorkChain
 
 load_profile()
 
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     py_struc = parser.get_structures(primitive=True)[0]
     aiida_structure = orm.StructureData(pymatgen=py_struc)
 
-    builder = musConvWorkChain.get_builder()
+    builder = MusconvWorkChain.get_builder()
     structure = aiida_structure
     builder.structure = structure
     # builder.max_iter_num = orm.Int(3)                  #optional
