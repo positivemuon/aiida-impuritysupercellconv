@@ -5,8 +5,8 @@ from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 from aiida.engine import ToContext, WorkChain, calcfunction, if_, while_
 from aiida.plugins import CalculationFactory
-from musconv.chkconv import chkconvergence
-from musconv.supcgen import scgenerators
+from musconv.chkconv import ChkConvergence
+from musconv.supcgen import ScGenerators
 
 
 @calcfunction
@@ -15,7 +15,7 @@ def init_supcgen(aiida_struc, min_length):
     p_st = aiida_struc.get_pymatgen_structure()
 
     # Calls the supercell (SC) generation class
-    scg = scgenerators(p_st)
+    scg = ScGenerators(p_st)
     p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
 
     ad_scst = orm.StructureData(pymatgen=p_scst_mu)
@@ -39,7 +39,7 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
     mu_frac_coord = vor_site.get_array("Voronoi_site")
 
     # Calls the supercell (SC) generation class
-    scg = scgenerators(p_st)
+    scg = ScGenerators(p_st)
     p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
 
     ad_scst_out = orm.StructureData(pymatgen=p_scst_mu)
@@ -61,7 +61,7 @@ def check_if_conv_achieved(aiida_struc, traj_out):
     ase_struc = aiida_struc.get_ase()
 
     # Calls the check supercell convergence class
-    csc = chkconvergence(ase_struc, atm_forces)
+    csc = ChkConvergence(ase_struc, atm_forces)
     cond = csc.apply_first_crit()
     cond2 = csc.apply_2nd_crit()
 
@@ -249,8 +249,8 @@ class MusconvWorkChain(WorkChain):
     def exit_max_iteration_exceeded(self):
         """Exit code if max iteration number is reached"""
         self.report(
-            f"Exiting MusconvWorkChain, Coverged supercell NOT achieved, next iter "
-            "num <{self.ctx.n}> is greater than max iteration number {self.inputs.max_iter_num.value}"
+            f"Exiting MusconvWorkChain, Coverged supercell NOT achieved, next iter num"
+            " <{self.ctx.n}> is greater than max iteration number {self.inputs.max_iter_num.value}"
         )
         return self.exit_codes.ERROR_NUM_CONVERGENCE_ITER_EXCEEDED
 
