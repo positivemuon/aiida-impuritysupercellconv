@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
+"""Example to run the workchain"""
 from aiida import load_profile, orm
-from aiida.engine import ToContext, run, submit
+from aiida.engine import run, submit
 from aiida.plugins import DataFactory
+from pymatgen.io.cif import CifParser
 
 from aiida_musConv.workflows.musConv import musConvWorkChain
 
 load_profile()
 
-from pymatgen.io.cif import CifParser
 
 if __name__ == "__main__":
     parser = CifParser("LiF.cif")
@@ -20,7 +21,8 @@ if __name__ == "__main__":
     # builder.max_iter_num = orm.Int(3)                  #optional
     # builder.min_length = orm.Float(5.2)                #optional
     # builder.kpoints_distance = orm.Float(0.401)        #optional
-    # builder.pseudofamily = orm.Str('SSSP/1.2/PBE/efficiency') #optional depending if the label is same
+    ##optional depending if the label is same
+    # builder.pseudofamily = orm.Str('SSSP/1.2/PBE/efficiency')
 
     """N:B the pseudos and kpoints are no longer inputs in pwworkchain,
        already taken care of in the musConvworkchain

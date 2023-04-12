@@ -2,7 +2,8 @@
 """Tests for the `musConvWorkChain` class."""
 import pytest
 from aiida import orm
-from aiida.plugins import DataFactory
+from aiida.engine.utils import instantiate_process
+from aiida.manage.manager import get_manager
 
 from aiida_musConv.workflows.musConv import musConvWorkChain
 
@@ -15,12 +16,11 @@ def generate_builder(generate_structure, fixture_code):
         """Generate default builder for `musConvWorkChain`"""
 
         inputstructure = generate_structure("Si")
-        code = fixture_code("quantumespresso.pw")
+        # code = fixture_code("quantumespresso.pw")
 
         builder = musConvWorkChain.get_builder()
         builder.structure = inputstructure
 
-        Dict = DataFactory("dict")
         paramters = {
             "CONTROL": {
                 "calculation": "scf",
@@ -43,7 +43,7 @@ def generate_builder(generate_structure, fixture_code):
             },
         }
 
-        builder.pwscf.parameters = Dict(dict=paramters)
+        builder.pwscf.parameters = orm.Dict(dict=paramters)
         builder.pwscf.metadata.options.resources = {
             "num_machines": 1,
             "num_mpiprocs_per_machine": 1,
@@ -59,16 +59,16 @@ def generate_workchain(generate_builder):
     """Generate an instance of musConvWorkChain"""
 
     def _generate_workchain(exit_code=None):
-        from aiida.engine.utils import instantiate_process
-        from aiida.manage.manager import get_manager
-
         builder = generate_builder()
         runner = get_manager().get_runner()
         process = instantiate_process(runner, builder)
 
-        if exit_code is not None:
-            node.set_process_state(ProcessState.FINISHED)
-            node.set_exit_status(exit_code.status)
+        # if exit_code is not None:
+        #    node = generate_calc_job_node(
+        #    entry_point_calc_job, fixture_localhost, test_name, inputs["musConvWorkChain"]
+        #    )
+        #    node.set_process_state(ProcessState.FINISHED)
+        #    node.set_exit_status(exit_code.status)
 
         return process
 
@@ -78,7 +78,8 @@ def generate_workchain(generate_builder):
 def test_initialize(aiida_profile, generate_workchain):
     """
     Test `musConvWorkChain.initialization`.
-    This checks that we can create the workchain successfully, and that it is initialised into the correct state.
+    This checks that we can create the workchain successfully,
+     and that it is initialised into the correct state.
     """
     process = generate_workchain()
     assert process.init_supcell_gen() is None

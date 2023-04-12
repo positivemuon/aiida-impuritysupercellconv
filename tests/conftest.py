@@ -3,6 +3,8 @@
 import os
 
 import pytest
+from aiida.common.folders import SandboxFolder
+from aiida.orm import Code, StructureData
 
 pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=invalid-name
 
@@ -10,8 +12,10 @@ pytest_plugins = ["aiida.manage.tests.pytest_fixtures"]  # pylint: disable=inval
 @pytest.fixture(scope="session")
 def filepath_tests():
     """Return the absolute filepath of the `tests` folder.
-    .. warning:: if this file moves with respect to the `tests` folder, the implementation should change.
-    :return: absolute filepath of `tests` folder which is the basepath for all test resources.
+    .. warning:: if this file moves with respect to the `tests` folder,
+    the implementation should change.
+    :return: absolute filepath of `tests` folder which is the basepath
+     for all test resources.
     """
     return os.path.dirname(os.path.abspath(__file__))
 
@@ -25,8 +29,6 @@ def filepath_fixtures(filepath_tests):
 @pytest.fixture(scope="function")
 def fixture_sandbox():
     """Return a `SandboxFolder`."""
-    from aiida.common.folders import SandboxFolder
-
     with SandboxFolder() as folder:
         yield folder
 
@@ -41,11 +43,11 @@ def fixture_localhost(aiida_localhost):
 
 @pytest.fixture
 def fixture_code(fixture_localhost):
-    """Return a `Code` instance configured to run calculations of given entry point on localhost `Computer`."""
+    """Return a `Code` instance configured to run calculations of given entry point
+    on localhost `Computer`.
+    """
 
     def _fixture_code(entry_point_name):
-        from aiida.orm import Code
-
         return Code(
             input_plugin_name=entry_point_name,
             remote_computer_exec=[fixture_localhost, "/bin/true"],
@@ -59,11 +61,11 @@ def generate_structure():
     """Return a ``StructureData`` representing either bulk silicon or a water molecule."""
 
     def _generate_structure(structure_id="Si"):
-        """Return a ``StructureData`` representing bulk silicon or a snapshot of a single water molecule dynamics.
-        :param structure_id: identifies the ``StructureData`` you want to generate. Either 'Si' or 'H2O' or 'GaAs'.
+        """Return a ``StructureData`` representing bulk silicon or a snapshot
+        of a single water molecule dynamics.
+        :param structure_id: identifies the ``StructureData`` you want to
+        generate. Either 'Si' or 'H2O' or 'GaAs'.
         """
-        from aiida.orm import StructureData
-
         if structure_id == "Si":
             param = 5.43
             cell = [
