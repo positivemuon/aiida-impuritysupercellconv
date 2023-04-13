@@ -77,7 +77,7 @@ if __name__ == "__main__":
             res=orm.load_node(node.pk)
             py_conv_struct=res.outputs['Converged_supercell'].get_pymatgen_structure()
             py_conv_struct.to(filename="supercell_withmu.cif".format())
-            Sc_matrix=res.outputs['Converged_SCmatrix'].get_array('SC_matrix')
+            Sc_matrix=res.outputs['Converged_SCmatrix'].get_array('SCmat')
             print(Sc_matrix)
         else:
             print('Excepted')
@@ -91,11 +91,11 @@ if __name__ == "__main__":
     #print(results) # from #results, node = run.get_node(builder)
     #py_conv_struct=results['Converged_supercell'].get_pymatgen_structure()
     #py_conv_struct.to(filename="supercell_withmu.cif".format())
-    #Sc_matrix=results['Converged_SCmatrix'].get_array('SC_matrix')
+    #Sc_matrix=results['Converged_SCmatrix'].get_array('SCmat')
 
     #get results  with submit
     #res=orm.load_node(node.pk)
     #py_conv_struct=res.outputs['Converged_supercell'].get_pymatgen_structure()
     #py_conv_struct.to(filename="supercell_withmu.cif".format())
-    #Sc_matrix=res.outputs['Converged_SCmatrix'].get_array('SC_matrix')
+    #Sc_matrix=res.outputs['Converged_SCmatrix'].get_array('SCmat')
     """
