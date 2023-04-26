@@ -1,3 +1,5 @@
 # -*- coding: utf-8 -*-
-"""The AiiDA plugin for musconv"""
-__version__ = "0.0.1"
+#
+# The AiiDA plugin for musconv
+#
+__version__ = "1.0.0"
