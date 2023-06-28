@@ -4,10 +4,17 @@ import numpy as np
 from aiida import orm
 from aiida.common.extendeddicts import AttributeDict
 from aiida.engine import ToContext, WorkChain, calcfunction, if_, while_
-from aiida.plugins import CalculationFactory
+from aiida.plugins import WorkflowFactory
+
+from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
+from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinType
+
 from musconv.chkconv import ChkConvergence
 from musconv.supcgen import ScGenerators
 
+
+PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
+PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 @calcfunction
 def init_supcgen(aiida_struc, min_length):
@@ -86,10 +93,7 @@ def get_kpoints(aiida_struc, k_density):
     return kpoints
 
 
-PwCalculation = CalculationFactory("quantumespresso.pw")
-
-
-class MusconvWorkChain(WorkChain):
+class MusconvWorkChain(ProtocolMixin, WorkChain):
     """WorkChain for finding converged supercell for interstitial impurity calculation"""
 
     @classmethod
@@ -126,7 +130,7 @@ class MusconvWorkChain(WorkChain):
             help="The minimum desired distance in 1/Å between k-points in reciprocal space.",
         )
         spec.input(
-            "pseudofamily",
+            "pseudo_family",
             valid_type=orm.Str,
             default=lambda: orm.Str("SSSP/1.2/PBE/efficiency"),
             required=False,
@@ -134,12 +138,27 @@ class MusconvWorkChain(WorkChain):
         )
 
         spec.expose_inputs(
-            PwCalculation,
+            PwBaseWorkChain,
             namespace="pwscf",
-            exclude=("structure", "pseudos", "kpoints"),
-        )  # use the  pw calcjob
+            exclude=("pw.structure", "kpoints"),
+        )  # use the  pw base workflow
+        
+        spec.expose_inputs(
+            PwRelaxWorkChain,
+            namespace="relax",
+            exclude=("structure"),
+            namespace_options={
+                'required': False, 
+                'populate_defaults': False,
+                'help': 'the preprocess relaxation step, if needed.',
+            },
+        )  # use the  pw relax workflow
 
         spec.outline(
+            if_(cls.should_run_relax)(
+                    cls.run_relax,
+                    cls.inspect_relax
+                ),
             cls.init_supcell_gen,
             cls.run_pw_scf,
             cls.inspect_run_get_forces,
@@ -158,9 +177,15 @@ class MusconvWorkChain(WorkChain):
         spec.output("Converged_SCmatrix", valid_type=orm.ArrayData, required=True)
 
         spec.exit_code(
+            403,
+            "ERROR_RELAXATION_FAILED",
+            message="the PwRelaxWorkchain failed",
+        )
+        
+        spec.exit_code(
             402,
             "ERROR_SUB_PROCESS_FAILED_SCF",
-            message="one of the PwCalculation subprocesses failed",
+            message="one of the PwBaseWorkChain subprocesses failed",
         )
         spec.exit_code(
             702,
@@ -173,15 +198,137 @@ class MusconvWorkChain(WorkChain):
             message="Error in fitting the forces to an exponential",
         )
 
+    @classmethod
+    def get_builder_from_protocol(
+        cls,
+        pw_code,
+        structure,
+        protocol=None,
+        overrides=None,
+        electronic_type=ElectronicType.METAL,
+        spin_type=SpinType.NONE,
+        relax_type=None,
+        initial_magnetic_moments=None,
+        options=None,
+        min_length=None,
+        kpoints_distance=0.401,
+        pseudo_family="SSSP/1.2/PBE/efficiency",
+        max_iter_num=4,
+        **kwargs,
+    ):
+        """Return a builder prepopulated with inputs selected according to the chosen protocol.
+
+        :param pw_code: the ``Code`` instance configured for the ``quantumespresso.pw`` plugin.
+        :param structure: the ``StructureData`` instance to use.
+        :param protocol: protocol to use, if not specified, the default will be used.
+        :param overrides: optional dictionary of inputs to override the defaults of the protocol.
+        :param electronic_type: indicate the electronic character of the system through ``ElectronicType`` instance.
+        :param spin_type: indicate the spin polarization type to use through a ``SpinType`` instance.
+        :param initial_magnetic_moments: optional dictionary that maps the initial magnetic moment of each kind to a
+            desired value for a spin polarized calculation. Note that in case the ``starting_magnetization`` is also
+            provided in the ``overrides``, this takes precedence over the values provided here. In case neither is
+            provided and ``spin_type == SpinType.COLLINEAR``, an initial guess for the magnetic moments is used.
+        :param options: A dictionary of options that will be recursively set for the ``metadata.options`` input of all
+            the ``CalcJobs`` that are nested in this work chain.
+        :param min_length: The minimum length of the smallest lattice vector for the first generated supercell.
+        :param kpoints_distance: the minimum desired distance in 1/Å between k-points in reciprocal space.
+        :param pseudo_family: the label of the pseudo family.
+        :param max_iter_num: Maximum number of iteration in the supercell convergence loop.
+        :return: a process builder instance with all inputs defined ready for launch.
+        """
+        
+        from aiida_quantumespresso.workflows.protocols.utils import get_starting_magnetization, recursive_merge
+    
+    
+        if not overrides: overrides = {}
+            
+        overrides_pwscf = overrides.pop('pwscf',{})
+        
+        builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
+                pw_code,
+                structure,
+                protocol=protocol,
+                overrides=overrides_pwscf,
+                electronic_type=electronic_type,
+                spin_type=spin_type,
+                initial_magnetic_moments=initial_magnetic_moments,
+                pseudo_family=pseudo_family,
+                **kwargs,
+                )
+        
+        builder_pwscf['pw'].pop('structure', None)
+        builder_pwscf.pop('kpoints_distance', None)       
+        
+        builder = cls.get_builder()
+        
+        #we can set this also wrt to some protocol, TOBE discussed
+        builder.min_length=orm.Float(overrides.pop("min_length",min_length))
+        builder.kpoints_distance=orm.Float(overrides.pop("kpoints_distance",kpoints_distance))
+        builder.max_iter_num=orm.Int(overrides.pop("max_iter_num",max_iter_num))
+        
+        builder.pwscf = builder_pwscf
+        
+        builder.structure = structure
+        builder.pseudo_family = orm.Str(pseudo_family)
+        
+        if relax_type:
+            builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
+                    pw_code,
+                    structure,
+                    protocol=protocol,
+                    overrides=overrides_pwscf,
+                    electronic_type=electronic_type,
+                    spin_type=spin_type,
+                    initial_magnetic_moments=initial_magnetic_moments,
+                    pseudo_family=pseudo_family,
+                    relax_type=RelaxType.POSITIONS_CELL,
+                    **kwargs,
+                    )
+            
+            builder_relax.pop('structure', None)
+            builder.relax = builder_relax
+        
+        return builder
+    
+    def should_run_relax(self):
+        return "relax" in self.inputs
+    
+    def run_relax(self):
+        """Run the `PwBaseWorkChain` to run a relax `PwCalculation`."""
+
+        inputs = self.inputs.relax
+        inputs.pw.structure = self.inputs.structure
+
+        running = self.submit(PwRelaxWorkChain, **inputs)
+
+        self.report(f'launching PwRelaxWorkChain<{running.pk}>')
+
+        return ToContext(calculation_run=running)
+    
+    def inspect_relax(self):
+        calculation = self.ctx.calculation_run
+        if not calculation.is_finished_ok:
+            self.report(
+                f"PwRelaxWorkChain<{calculation.pk}> failed"
+                "with exit status {calculation.exit_status}"
+            )
+            return self.exit_codes.ERROR_RELAXATION_FAILED
+        else:
+            self.ctx.structure = calculation.outputs.output_structure
+            
+        return
+        
     def init_supcell_gen(self):
         """initialize supercell generation"""
         self.ctx.n = orm.Int(0)
+        
+        if not "structure" in self.ctx: self.ctx.structure = self.inputs.structure
 
         if self.inputs.min_length is None:
-            m_l = min(self.inputs.structure.get_pymatgen_structure().lattice.abc) + 1
+            m_l = min(self.ctx.structure.get_pymatgen_structure().lattice.abc) + 1
             self.inputs.min_length = orm.Float(m_l)
 
-        result_ini = init_supcgen(self.inputs.structure, self.inputs.min_length)
+        result_ini = init_supcgen(self.ctx.structure, self.inputs.min_length)
 
         self.ctx.sup_struc_mu = result_ini["SC_struc"]
         self.ctx.musite = result_ini["Vor_site"]
@@ -189,17 +336,17 @@ class MusconvWorkChain(WorkChain):
 
     def run_pw_scf(self):
         """Input Qe-pw structure and run pw"""
-        inputs = AttributeDict(self.exposed_inputs(PwCalculation, namespace="pwscf"))
+        inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace="pwscf"))
 
-        inputs.structure = self.ctx.sup_struc_mu
-        inputs.pseudos = get_pseudos(
-            self.ctx.sup_struc_mu, self.inputs.pseudofamily.value
+        inputs.pw.structure = self.ctx.sup_struc_mu
+        inputs.pw.pseudos = get_pseudos(
+            self.ctx.sup_struc_mu, self.inputs.pseudo_family.value
         )
         inputs.kpoints = get_kpoints(
             self.ctx.sup_struc_mu, self.inputs.kpoints_distance.value
         )
 
-        running = self.submit(PwCalculation, **inputs)
+        running = self.submit(PwBaseWorkChain, **inputs)
         self.report(f"running SCF calculation {running.pk}")
 
         return ToContext(calculation_run=running)
@@ -210,7 +357,7 @@ class MusconvWorkChain(WorkChain):
 
         if not calculation.is_finished_ok:
             self.report(
-                f"PwCalculation<{calculation.pk}> failed"
+                f"PwBaseWorkChain<{calculation.pk}> failed"
                 "with exit status {calculation.exit_status}"
             )
             return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
@@ -240,7 +387,7 @@ class MusconvWorkChain(WorkChain):
     def get_larger_cell(self):
         """Previous supercell not converged - get larger supercell"""
         result_reini = re_init_supcgen(
-            self.inputs.structure, self.ctx.sup_struc_mu, self.ctx.musite
+            self.ctx.structure, self.ctx.sup_struc_mu, self.ctx.musite
         )
 
         self.ctx.sup_struc_mu = result_reini["SC_struc"]
