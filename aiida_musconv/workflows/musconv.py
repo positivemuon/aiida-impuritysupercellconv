@@ -262,9 +262,9 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         builder = cls.get_builder()
         
         #we can set this also wrt to some protocol, TOBE discussed
-        builder.min_length=orm.Float(overrides.pop("min_length",min_length))
-        builder.kpoints_distance=orm.Float(overrides.pop("kpoints_distance",kpoints_distance))
-        builder.max_iter_num=orm.Int(overrides.pop("max_iter_num",max_iter_num))
+        builder.min_length=orm.Float(min_length)
+        builder.kpoints_distance=orm.Float(kpoints_distance)
+        builder.max_iter_num=orm.Int(max_iter_num)
         
         builder.pwscf = builder_pwscf
         
@@ -281,7 +281,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                     spin_type=spin_type,
                     initial_magnetic_moments=initial_magnetic_moments,
                     pseudo_family=pseudo_family,
-                    relax_type=RelaxType.POSITIONS_CELL,
+                    relax_type=relax_type,
                     **kwargs,
                     )
             
