@@ -2,7 +2,7 @@
 """ AiiDa MusconvWorkChain class """
 import numpy as np
 from aiida import orm
-from aiida.common.extendeddicts import AttributeDict
+from aiida.common import AttributeDict
 from aiida.engine import ToContext, WorkChain, calcfunction, if_, while_
 from aiida.plugins import WorkflowFactory
 
@@ -296,8 +296,8 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
     def run_relax(self):
         """Run the `PwBaseWorkChain` to run a relax `PwCalculation`."""
 
-        inputs = self.inputs.relax
-        inputs.pw.structure = self.inputs.structure
+        inputs = AttributeDict(self.exposed_inputs(PwRelaxWorkChain, namespace='relax'))
+        inputs.structure = self.inputs.structure
 
         running = self.submit(PwRelaxWorkChain, **inputs)
 
