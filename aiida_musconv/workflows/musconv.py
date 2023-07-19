@@ -298,6 +298,8 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
 
         inputs = AttributeDict(self.exposed_inputs(PwRelaxWorkChain, namespace='relax'))
         inputs.structure = self.inputs.structure
+        
+        inputs.metadata.call_link_label = f'relax_step'
 
         running = self.submit(PwRelaxWorkChain, **inputs)
 
