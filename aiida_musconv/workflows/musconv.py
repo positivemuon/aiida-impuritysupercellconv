@@ -149,7 +149,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             exclude=("structure"),
             namespace_options={
                 'required': False, 
-                'populate_defaults': False,
+                'populate_defaults':False,
                 'help': 'the preprocess relaxation step, if needed.',
             },
         )  # use the  pw relax workflow
@@ -287,6 +287,8 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             
             builder_relax.pop('structure', None)
             builder.relax = builder_relax
+        else:
+            builder.pop('relax', None)
         
         return builder
     
