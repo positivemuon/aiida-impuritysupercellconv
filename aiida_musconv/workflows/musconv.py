@@ -148,8 +148,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             namespace="relax",
             exclude=("structure"),
             namespace_options={
-                'required': False, 
-                'populate_defaults':False,
+                'required': False, 'populate_defaults':False,
                 'help': 'the preprocess relaxation step, if needed.',
             },
         )  # use the  pw relax workflow
@@ -244,6 +243,10 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             
         overrides_pwscf = overrides.pop('pwscf',{})
         
+        overrides_pwscf = recursive_merge(
+                overrides_pwscf, {"CONTROL": {"tstress": True, "tprnfor": True}}
+            )
+        
         builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
@@ -272,6 +275,8 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         builder.pseudo_family = orm.Str(pseudo_family)
         
         if relax_type:
+            if relax_type != RelaxType.POSITIONS:
+                raise ValueError(f'The only accepted relax_type parameter is "RelaxType.POSITIONS". You selected "{relax_type}", which is currently forbidden.')
             builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
                     pw_code,
                     structure,
@@ -286,6 +291,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                     )
             
             builder_relax.pop('structure', None)
+            builder_relax.pop('base_final_scf', None)
             builder.relax = builder_relax
         else:
             builder.pop('relax', None)
