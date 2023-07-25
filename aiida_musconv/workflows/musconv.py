@@ -153,6 +153,8 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             },
         )  # use the  pw relax workflow
 
+        spec.inputs.validator = input_validator
+        
         spec.outline(
             if_(cls.should_run_relax)(
                     cls.run_relax,
@@ -241,7 +243,11 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         overrides_pwscf = overrides.pop('pwscf',{})
         
         overrides_pwscf = recursive_merge(
-                overrides_pwscf, {"CONTROL": {"tprnfor": True}}
+                overrides_pwscf, {
+                    "CONTROL": {
+                        "tprnfor": True,
+                        },
+                    }
             )
         
         builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
@@ -442,17 +448,18 @@ def recursive_consistency_check(input_dict):
     
     unconsistency_sentence = ''
     
-    if parameters["relax"]["base"]["pw"]["parameters"].get_dict()["CONTROL"]["calculation"] != 'relax':
-        unconsistency_sentence+=f'Checking inputs.musconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
-    
-    
-    if 'base_final_scf' in parameters['relax']:
-        if parameters['relax']['base_final_scf'] ==  {'metadata': {}, 'pw': {'metadata': {'options': {'stash': {}}}, 'monitors': {}, 'pseudos': {}}}:
-            pass
-        elif parameters['relax']['base_final_scf'] ==  {}:
-            pass
-        else:
-            unconsistency_sentence+=f'Checking inputs.musconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
+    if "relax" in parameters:
+        if parameters["relax"]["base"]["pw"]["parameters"].get_dict()["CONTROL"]["calculation"] != 'relax':
+            unconsistency_sentence+=f'Checking inputs.musconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
+        
+        
+        if 'base_final_scf' in parameters['relax']:
+            if parameters['relax']['base_final_scf'] ==  {'metadata': {}, 'pw': {'metadata': {'options': {'stash': {}}}, 'monitors': {}, 'pseudos': {}}}:
+                pass
+            elif parameters['relax']['base_final_scf'] ==  {}:
+                pass
+            else:
+                unconsistency_sentence+=f'Checking inputs.musconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
     
     
     
@@ -461,7 +468,7 @@ def recursive_consistency_check(input_dict):
     #print(value_input_relax,value_input_pwscf,value_overrides)
 
     if value_input_pwscf != value_overrides:
-        wrong_inputs_pwscf.append(key)
+        wrong_inputs_pwscf.append('tprnfor')
         unconsistency_sentence += f'Checking inputs.musconv.pwscf.pw.parameters input: "tprnfor" is not correct. You provided the value "{value_input_pwscf}", but only "{value_overrides}" is consistent with your settings.\n'
 
     return unconsistency_sentence
