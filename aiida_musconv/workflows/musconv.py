@@ -204,10 +204,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         structure,
         protocol=None,
         overrides=None,
-        electronic_type=ElectronicType.METAL,
-        spin_type=SpinType.NONE,
-        relax_type=None,
-        initial_magnetic_moments=None,
+        relax_unitcell=False, 
         options=None,
         min_length=None,
         kpoints_distance=0.401,
@@ -244,7 +241,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         overrides_pwscf = overrides.pop('pwscf',{})
         
         overrides_pwscf = recursive_merge(
-                overrides_pwscf, {"CONTROL": {"tstress": True, "tprnfor": True}}
+                overrides_pwscf, {"CONTROL": {"tprnfor": True}}
             )
         
         builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
@@ -252,9 +249,6 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                 structure,
                 protocol=protocol,
                 overrides=overrides_pwscf,
-                electronic_type=electronic_type,
-                spin_type=spin_type,
-                initial_magnetic_moments=initial_magnetic_moments,
                 pseudo_family=pseudo_family,
                 **kwargs,
                 )
@@ -274,19 +268,14 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         builder.structure = structure
         builder.pseudo_family = orm.Str(pseudo_family)
         
-        if relax_type:
-            if relax_type != RelaxType.POSITIONS:
-                raise ValueError(f'The only accepted relax_type parameter is "RelaxType.POSITIONS". You selected "{relax_type}", which is currently forbidden.')
+        if relax_unitcell:
             builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
                     pw_code,
                     structure,
                     protocol=protocol,
                     overrides=overrides_pwscf,
-                    electronic_type=electronic_type,
-                    spin_type=spin_type,
-                    initial_magnetic_moments=initial_magnetic_moments,
                     pseudo_family=pseudo_family,
-                    relax_type=relax_type,
+                    relax_type=RelaxType.POSITIONS,
                     **kwargs,
                     )
             
@@ -297,6 +286,15 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             builder.pop('relax', None)
         
         return builder
+    
+    def input_validation_step(self):
+        """
+        Preliminary step in which we validat the inputs,
+        as some input is forbidden to be changed by the user.
+        """
+        pwscf_parameters = self.inputs.pwscf.pw.parameters.get_dict()
+        
+        
     
     def should_run_relax(self):
         return "relax" in self.inputs
@@ -416,3 +414,61 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         self.report("Setting Outputs")
         self.out("Converged_supercell", self.ctx.sup_struc_mu)
         self.out("Converged_SCmatrix", self.ctx.sc_mat)
+        
+        
+def iterdict(d,key):
+  value = None
+  for k,v in d.items():
+    if isinstance(v, dict):
+        value = iterdict(v,key)
+    else:            
+        if k == key:
+          return v
+    if value: return value
+
+
+def recursive_consistency_check(input_dict):
+    import copy
+    
+    """Validation of the inputs provided for the FindMuonWorkChain.
+    """
+    
+    parameters = copy.deepcopy(input_dict)
+    
+    keys = ["occupations","smearing"]
+    
+    wrong_inputs_relax = []
+    wrong_inputs_pwscf = []
+    
+    unconsistency_sentence = ''
+    
+    if parameters["relax"]["base"]["pw"]["parameters"].get_dict()["CONTROL"]["calculation"] != 'relax':
+        unconsistency_sentence+=f'Checking inputs.musconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
+    
+    
+    if 'base_final_scf' in parameters['relax']:
+        if parameters['relax']['base_final_scf'] ==  {'metadata': {}, 'pw': {'metadata': {'options': {'stash': {}}}, 'monitors': {}, 'pseudos': {}}}:
+            pass
+        elif parameters['relax']['base_final_scf'] ==  {}:
+            pass
+        else:
+            unconsistency_sentence+=f'Checking inputs.musconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
+    
+    
+    
+    value_input_pwscf = iterdict(parameters["pwscf"]["pw"]["parameters"].get_dict(),'tprnfor')
+    value_overrides = True
+    #print(value_input_relax,value_input_pwscf,value_overrides)
+
+    if value_input_pwscf != value_overrides:
+        wrong_inputs_pwscf.append(key)
+        unconsistency_sentence += f'Checking inputs.musconv.pwscf.pw.parameters input: "tprnfor" is not correct. You provided the value "{value_input_pwscf}", but only "{value_overrides}" is consistent with your settings.\n'
+
+    return unconsistency_sentence
+
+def input_validator(inputs):
+    inconsistency = recursive_consistency_check(inputs)
+    if len(inconsistency) > 1:
+        raise ValueError('\n'+inconsistency+'\n Please check the inputs of your MusConvWorkChain instance or use "get_builder_from_protocol()" method to populate correctly the inputs.\n')
+    
+    return
