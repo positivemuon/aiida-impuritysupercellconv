@@ -463,7 +463,7 @@ def recursive_consistency_check(input_dict):
 
     return unconsistency_sentence
 
-def input_validator(inputs):
+def input_validator(inputs,_):
     inconsistency = recursive_consistency_check(inputs)
     if len(inconsistency) > 1:
         raise ValueError('\n'+inconsistency+'\n Please check the inputs of your MusConvWorkChain instance or use "get_builder_from_protocol()" method to populate correctly the inputs.\n')
