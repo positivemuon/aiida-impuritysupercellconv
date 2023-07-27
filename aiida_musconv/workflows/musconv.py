@@ -12,6 +12,7 @@ from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinTy
 from musconv.chkconv import ChkConvergence
 from musconv.supcgen import ScGenerators
 
+from aiida.orm import StructureData
 
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
@@ -103,7 +104,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
 
         spec.input(
             "structure",
-            valid_type=orm.StructureData,
+            valid_type=StructureData,
             required=True,
             help="Input initial structure",
         )
@@ -174,7 +175,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             cls.set_outputs,
         )
 
-        spec.output("Converged_supercell", valid_type=orm.StructureData, required=True)
+        spec.output("Converged_supercell", valid_type=StructureData, required=True)
         spec.output("Converged_SCmatrix", valid_type=orm.ArrayData, required=True)
 
         spec.exit_code(
@@ -202,32 +203,27 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
     @classmethod
     def get_builder_from_protocol(
         cls,
-        pw_code,
-        structure,
-        protocol=None,
-        overrides=None,
-        relax_unitcell=False, 
-        options=None,
-        min_length=None,
-        kpoints_distance=0.401,
-        pseudo_family="SSSP/1.2/PBE/efficiency",
-        max_iter_num=4,
+        pw_code: orm.Code,
+        structure: StructureData,
+        protocol: str = None,
+        overrides: dict = None,
+        relax_unitcell: bool = False, 
+        options = None,
+        min_length: float = None,
+        kpoints_distance: float = 0.401,
+        pseudo_family: str ="SSSP/1.2/PBE/efficiency",
+        max_iter_num: int = 4,
         **kwargs,
     ):
         """Return a builder prepopulated with inputs selected according to the chosen protocol.
 
-        :param pw_code: the ``Code`` instance configured for the ``quantumespresso.pw`` plugin.
+        :param pw_code: the ``Code`` instance configured for the ``quantumespresso.pw`` plugin. Used in all the sub workchains.
         :param structure: the ``StructureData`` instance to use.
         :param protocol: protocol to use, if not specified, the default will be used.
         :param overrides: optional dictionary of inputs to override the defaults of the protocol.
-        :param electronic_type: indicate the electronic character of the system through ``ElectronicType`` instance.
-        :param spin_type: indicate the spin polarization type to use through a ``SpinType`` instance.
-        :param initial_magnetic_moments: optional dictionary that maps the initial magnetic moment of each kind to a
-            desired value for a spin polarized calculation. Note that in case the ``starting_magnetization`` is also
-            provided in the ``overrides``, this takes precedence over the values provided here. In case neither is
-            provided and ``spin_type == SpinType.COLLINEAR``, an initial guess for the magnetic moments is used.
+        :param relax_unitcell: optional relaxation of the unit cell before to put the defects and proceed with the supercell relaxation.
         :param options: A dictionary of options that will be recursively set for the ``metadata.options`` input of all
-            the ``CalcJobs`` that are nested in this work chain.
+            the ``CalcJobs`` that are nested in this workchain.
         :param min_length: The minimum length of the smallest lattice vector for the first generated supercell.
         :param kpoints_distance: the minimum desired distance in 1/Å between k-points in reciprocal space.
         :param pseudo_family: the label of the pseudo family.
@@ -235,8 +231,9 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         :return: a process builder instance with all inputs defined ready for launch.
         """
         
-        from aiida_quantumespresso.workflows.protocols.utils import get_starting_magnetization, recursive_merge
-    
+        from aiida_quantumespresso.workflows.protocols.utils import recursive_merge
+
+        builder = cls.get_builder()
     
         if not overrides: overrides = {}
             
@@ -260,20 +257,10 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                 )
         
         builder_pwscf['pw'].pop('structure', None)
-        builder_pwscf.pop('kpoints_distance', None)       
-        
-        builder = cls.get_builder()
-        
-        #we can set this also wrt to some protocol, TOBE discussed
-        builder.min_length=orm.Float(min_length)
-        builder.kpoints_distance=orm.Float(kpoints_distance)
-        builder.max_iter_num=orm.Int(max_iter_num)
-        
-        builder.pwscf = builder_pwscf
-        
-        builder.structure = structure
-        builder.pseudo_family = orm.Str(pseudo_family)
-        
+        builder_pwscf.pop('kpoints_distance', None)  
+
+        builder.pwscf = builder_pwscf 
+
         if relax_unitcell:
             builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
                     pw_code,
@@ -281,7 +268,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                     protocol=protocol,
                     overrides=overrides_pwscf,
                     pseudo_family=pseudo_family,
-                    relax_type=RelaxType.POSITIONS,
+                    relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                     **kwargs,
                     )
             
@@ -289,19 +276,19 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             builder_relax.pop('base_final_scf', None)
             builder.relax = builder_relax
         else:
-            builder.pop('relax', None)
+            builder.pop('relax', None)    
+        
+        #we can set this also wrt to some protocol
+        builder.min_length=orm.Float(min_length)
+        builder.kpoints_distance=orm.Float(kpoints_distance)
+        builder.max_iter_num=orm.Int(max_iter_num)
+        
+        builder.structure = structure
+        builder.pseudo_family = orm.Str(pseudo_family)
         
         return builder
     
-    def input_validation_step(self):
-        """
-        Preliminary step in which we validat the inputs,
-        as some input is forbidden to be changed by the user.
-        """
-        pwscf_parameters = self.inputs.pwscf.pw.parameters.get_dict()
-        
-        
-    
+
     def should_run_relax(self):
         return "relax" in self.inputs
     
@@ -315,6 +302,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
 
         running = self.submit(PwRelaxWorkChain, **inputs)
 
+        self.report(f'Relaxation of the defect-free unit cell requested.')
         self.report(f'launching PwRelaxWorkChain<{running.pk}>')
 
         return ToContext(calculation_run=running)
@@ -421,7 +409,9 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         self.out("Converged_supercell", self.ctx.sup_struc_mu)
         self.out("Converged_SCmatrix", self.ctx.sc_mat)
         
-        
+
+
+# Functions for the input validation.
 def iterdict(d,key):
   value = None
   for k,v in d.items():
