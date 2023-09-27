@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """ AiiDa MusconvWorkChain class """
 import numpy as np
+from typing import Union
 from aiida import orm
 from aiida.common import AttributeDict
 from aiida.engine import ToContext, WorkChain, calcfunction, if_, while_
-from aiida.plugins import WorkflowFactory
+from aiida.plugins import WorkflowFactory, DataFactory
+
 
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinType
@@ -12,8 +14,9 @@ from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinTy
 from musconv.chkconv import ChkConvergence
 from musconv.supcgen import ScGenerators
 
-from aiida.orm import StructureData
+from aiida.orm import StructureData as LegacyStructureData
 
+StructureData = DataFactory("atomistic.structure")
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
@@ -104,7 +107,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
 
         spec.input(
             "structure",
-            valid_type=StructureData,
+            valid_type=(StructureData,LegacyStructureData),
             required=True,
             help="Input initial structure",
         )
@@ -175,7 +178,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             cls.set_outputs,
         )
 
-        spec.output("Converged_supercell", valid_type=StructureData, required=True)
+        spec.output("Converged_supercell", valid_type=(StructureData,LegacyStructureData), required=True)
         spec.output("Converged_SCmatrix", valid_type=orm.ArrayData, required=True)
 
         spec.exit_code(
@@ -204,7 +207,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
     def get_builder_from_protocol(
         cls,
         pw_code: orm.Code,
-        structure: StructureData,
+        structure: Union[StructureData, LegacyStructureData],
         protocol: str = None,
         overrides: dict = None,
         relax_unitcell: bool = False, 
@@ -426,7 +429,7 @@ def iterdict(d,key):
 def recursive_consistency_check(input_dict):
     import copy
     
-    """Validation of the inputs provided for the FindMuonWorkChain.
+    """Validation of the inputs provided for the MusconvWorkChain.
     """
     
     parameters = copy.deepcopy(input_dict)
