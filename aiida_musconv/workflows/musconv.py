@@ -29,7 +29,10 @@ def init_supcgen(aiida_struc, min_length):
     scg = ScGenerators(p_st)
     p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
 
-    ad_scst = orm.StructureData(pymatgen=p_scst_mu)
+    if isinstance(aiida_struc,StructureData):
+        ad_scst = StructureData(pymatgen=p_scst_mu)
+    elif isinstance(aiida_struc,LegacyStructureData):
+        ad_scst = LegacyStructureData(pymatgen=p_scst_mu)
 
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
@@ -53,7 +56,10 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
     scg = ScGenerators(p_st)
     p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
 
-    ad_scst_out = orm.StructureData(pymatgen=p_scst_mu)
+    if isinstance(aiida_struc,StructureData):
+        ad_scst_out = StructureData(pymatgen=p_scst_mu)
+    elif isinstance(aiida_struc,LegacyStructureData):
+        ad_scst_out = LegacyStructureData(pymatgen=p_scst_mu)
 
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
@@ -145,12 +151,16 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             PwBaseWorkChain,
             namespace="pwscf",
             exclude=("pw.structure", "kpoints"),
+            namespace_options={
+                'required': True, 'populate_defaults':False,
+                'help': 'the pwscf step.',
+            },
         )  # use the  pw base workflow
         
         spec.expose_inputs(
             PwRelaxWorkChain,
             namespace="relax",
-            exclude=("structure"),
+            exclude=("structure","base_final_scf"),
             namespace_options={
                 'required': False, 'populate_defaults':False,
                 'help': 'the preprocess relaxation step, if needed.',
@@ -259,10 +269,12 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                 **kwargs,
                 )
         
-        builder_pwscf['pw'].pop('structure', None)
-        builder_pwscf.pop('kpoints_distance', None)  
-
-        builder.pwscf = builder_pwscf 
+        for k,v in builder_pwscf.items():
+            if k in ["structure","kpoints_distance"]: continue
+            setattr(builder.pwscf,k,v)
+        builder.pwscf.pw.pop('structure', None)
+        builder.pwscf.pop('kpoints_distance', None)  
+        builder.pwscf.pop('kpoints', None)  
 
         if relax_unitcell:
             builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
@@ -274,10 +286,12 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                     relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                     **kwargs,
                     )
-            
-            builder_relax.pop('structure', None)
-            builder_relax.pop('base_final_scf', None)
-            builder.relax = builder_relax
+                        
+            #setting subworkflows inputs
+            for k,v in builder_relax.items():
+                if k in ["structure", "base_final_scf"]: continue
+                setattr(builder.relax,k,v)
+            builder.relax.pop('base_final_scf', None) 
         else:
             builder.pop('relax', None)    
         
@@ -466,9 +480,12 @@ def recursive_consistency_check(input_dict):
 
     return unconsistency_sentence
 
-def input_validator(inputs,_):
+def input_validator(inputs,_,caller="MusconvWorkchain"):
     inconsistency = recursive_consistency_check(inputs)
     if len(inconsistency) > 1:
-        raise ValueError('\n'+inconsistency+'\n Please check the inputs of your MusConvWorkChain instance or use "get_builder_from_protocol()" method to populate correctly the inputs.\n')
+        if caller == "FindMuonWorkchain": 
+            return inconsistency
+        else:
+            raise ValueError('\n'+inconsistency+'\n Please check the inputs of your MusConvWorkChain instance or use "get_builder_from_protocol()" method to populate correctly the inputs.\n')
     
-    return
+    return #cannot return anything otherwise it Raise an error.

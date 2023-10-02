@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Example to run the workchain"""
 from aiida import load_profile, orm
+from aiida.plugins import DataFactory
 from aiida.engine import run, submit
 from aiida.plugins import DataFactory
 from pymatgen.io.cif import CifParser
@@ -9,11 +10,12 @@ from aiida_musconv.workflows.musconv import MusconvWorkChain
 
 load_profile()
 
+StructureData = DataFactory("atomistic.structure")
 
 if __name__ == "__main__":
     parser = CifParser("LiF.cif")
     py_struc = parser.get_structures(primitive=True)[0]
-    aiida_structure = orm.StructureData(pymatgen=py_struc)
+    aiida_structure = StructureData(pymatgen=py_struc)
 
     builder = MusconvWorkChain.get_builder()
     structure = aiida_structure
@@ -30,7 +32,7 @@ if __name__ == "__main__":
 
     codename = "pw7_0@localhost_serial1"  # edit pw code name
     code = orm.Code.get_from_string(codename)
-    builder.pwscf.code = code
+    builder.pwscf.pw.code = code
 
     Dict = DataFactory("dict")
     parameters = {
@@ -56,10 +58,10 @@ if __name__ == "__main__":
         },
     }
 
-    builder.pwscf.parameters = Dict(dict=parameters)
+    builder.pwscf.pw.parameters = Dict(dict=parameters)
     #
-    builder.pwscf.metadata.description = "a PWscf  test SCF"
-    builder.pwscf.metadata.options.resources = {
+    builder.pwscf.pw.metadata.description = "a PWscf  test SCF"
+    builder.pwscf.pw.metadata.options.resources = {
         "num_machines": 1,
         "num_mpiprocs_per_machine": 1,
     }
