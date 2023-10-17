@@ -19,6 +19,21 @@ from aiida.orm import StructureData as LegacyStructureData
 StructureData = DataFactory("atomistic.structure")
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
 PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
+original_PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
+
+
+def PwRelaxWorkChain_override_validator(inputs,ctx=None):
+    """validate inputs for musconv.relax; actually, it is
+    just a way to avoid defining it if we do not want it. 
+    otherwise the default check is done and it will excepts. 
+    """
+    if "relax" in inputs:
+        original_PwRelaxWorkChain.spec().inputs.validator(inputs,ctx)
+    else:
+        return None
+    
+PwRelaxWorkChain.spec().inputs.validator = PwRelaxWorkChain_override_validator
+
 
 @calcfunction
 def init_supcgen(aiida_struc, min_length):
@@ -164,6 +179,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             namespace_options={
                 'required': False, 'populate_defaults':False,
                 'help': 'the preprocess relaxation step, if needed.',
+                'dynamic':True,
             },
         )  # use the  pw relax workflow
 
@@ -276,24 +292,22 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
         builder.pwscf.pop('kpoints_distance', None)  
         builder.pwscf.pop('kpoints', None)  
 
-        if relax_unitcell:
-            builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
-                    pw_code,
-                    structure,
-                    protocol=protocol,
-                    overrides=overrides_pwscf,
-                    pseudo_family=pseudo_family,
-                    relax_type=RelaxType.POSITIONS, #Infinite dilute defect
-                    **kwargs,
-                    )
-                        
-            #setting subworkflows inputs
-            for k,v in builder_relax.items():
-                if k in ["structure", "base_final_scf"]: continue
-                setattr(builder.relax,k,v)
-            builder.relax.pop('base_final_scf', None) 
-        else:
-            builder.pop('relax', None)    
+        builder_relax = PwRelaxWorkChain.get_builder_from_protocol(
+                pw_code,
+                structure,
+                protocol=protocol,
+                overrides=overrides_pwscf,
+                pseudo_family=pseudo_family,
+                relax_type=RelaxType.POSITIONS, #Infinite dilute defect
+                **kwargs,
+                )
+                
+        for k,v in builder_relax.items():        
+            setattr(builder.relax,k,v)   
+        
+        builder.relax.pop('base_final_scf', None) 
+        if not relax_unitcell:
+            builder.relax.base.pw.parameters = orm.Dict({})
         
         #we can set this also wrt to some protocol
         builder.min_length=orm.Float(min_length)
@@ -307,7 +321,9 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
     
 
     def should_run_relax(self):
-        return "relax" in self.inputs
+        if "relax" in self.inputs:
+            return len(self.inputs.relax.base.pw.parameters.get_dict()) > 0
+        return False
     
     def run_relax(self):
         """Run the `PwBaseWorkChain` to run a relax `PwCalculation`."""
@@ -455,18 +471,19 @@ def recursive_consistency_check(input_dict):
     
     unconsistency_sentence = ''
     
-    if "relax" in parameters:
-        if parameters["relax"]["base"]["pw"]["parameters"].get_dict()["CONTROL"]["calculation"] != 'relax':
-            unconsistency_sentence+=f'Checking inputs.musconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
-        
-        
-        if 'base_final_scf' in parameters['relax']:
-            if parameters['relax']['base_final_scf'] ==  {'metadata': {}, 'pw': {'metadata': {'options': {'stash': {}}}, 'monitors': {}, 'pseudos': {}}}:
-                pass
-            elif parameters['relax']['base_final_scf'] ==  {}:
-                pass
-            else:
-                unconsistency_sentence+=f'Checking inputs.musconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
+    if "relax" in parameters :
+        if len(parameters["relax"]["base"]["pw"]["parameters"].get_dict()) > 0:
+            if parameters["relax"]["base"]["pw"]["parameters"].get_dict()["CONTROL"]["calculation"] != 'relax':
+                unconsistency_sentence+=f'Checking inputs.musconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
+            
+            
+            if 'base_final_scf' in parameters['relax']:
+                if parameters['relax']['base_final_scf'] ==  {'metadata': {}, 'pw': {'metadata': {'options': {'stash': {}}}, 'monitors': {}, 'pseudos': {}}}:
+                    pass
+                elif parameters['relax']['base_final_scf'] ==  {}:
+                    pass
+                else:
+                    unconsistency_sentence+=f'Checking inputs.musconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
     
     
     

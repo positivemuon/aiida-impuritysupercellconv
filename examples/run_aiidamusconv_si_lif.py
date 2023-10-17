@@ -10,10 +10,19 @@ from aiida_musconv.workflows.musconv import MusconvWorkChain
 
 load_profile()
 
-StructureData = DataFactory("atomistic.structure")
+from aiida.orm import StructureData as LegacyStructureData
+
+#choose the StructureData to be used in the simulation.
+structuredata="old"
+if structuredata=="new":    
+    StructureData = DataFactory("atomistic.structure")
+else:
+    StructureData = LegacyStructureData
+    
+system = "LiF", #LiF, Si
 
 if __name__ == "__main__":
-    parser = CifParser("LiF.cif")
+    parser = CifParser(f"{system}.cif")
     py_struc = parser.get_structures(primitive=True)[0]
     aiida_structure = StructureData(pymatgen=py_struc)
 
@@ -24,13 +33,13 @@ if __name__ == "__main__":
     # builder.min_length = orm.Float(5.2)                #optional
     # builder.kpoints_distance = orm.Float(0.401)        #optional
     ##optional depending if the label is same
-    # builder.pseudofamily = orm.Str('SSSP/1.2/PBE/efficiency')
+    builder.pseudofamily = orm.Str('SSSP/1.3/PBE/efficiency')
 
     """N:B the pseudos and kpoints are no longer inputs in pwworkchain,
        already taken care of in the musConvworkchain
     """
 
-    codename = "pw7_0@localhost_serial1"  # edit pw code name
+    codename = "pw-7.2@localhost" # edit
     code = orm.Code.get_from_string(codename)
     builder.pwscf.pw.code = code
 
