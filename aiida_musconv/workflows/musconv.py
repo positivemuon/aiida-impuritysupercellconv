@@ -281,7 +281,6 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                 structure,
                 protocol=protocol,
                 overrides=overrides_pwscf,
-                pseudo_family=pseudo_family,
                 **kwargs,
                 )
         
@@ -297,7 +296,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                 structure,
                 protocol=protocol,
                 overrides=overrides_pwscf,
-                pseudo_family=pseudo_family,
+                #pseudo_family=pseudo_family,
                 relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                 **kwargs,
                 )
