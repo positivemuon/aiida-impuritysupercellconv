@@ -266,21 +266,34 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
     
         if not overrides: overrides = {}
             
-        overrides_pwscf = overrides.pop('pwscf',{})
+        #overrides_pwscf = overrides.pop('pwscf',{})
         
-        overrides_pwscf = recursive_merge(
-                overrides_pwscf, {
-                    "CONTROL": {
-                        "tprnfor": True,
-                        },
-                    }
-            )
+        #overrides_pwscf = recursive_merge(overrides_pwscf, {"CONTROL": {"tprnfor": True,},})
+
+        overrides_all = {
+            "base": {
+                "pseudo_family": pseudo_family,
+                "pw": {
+                    "parameters": {
+                "CONTROL": {
+                    "tprnfor": True,
+                    "nstep": 200
+                    },
+                      },
+                    },
+            },
+            "base_final_scf": {"pseudo_family": pseudo_family,},
+            }
+
+        overrides_pwscf = recursive_merge(overrides, overrides_all)
         
         builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
                 protocol=protocol,
-                overrides=overrides_pwscf,
+                overrides=overrides_pwscf.get("base",None),
+                #overrides=overrides_pwscf,
+                #pseudo_family=pseudo_family,
                 **kwargs,
                 )
         
