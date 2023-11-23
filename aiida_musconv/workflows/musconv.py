@@ -272,7 +272,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
 
         overrides_all = {
             "base": {
-                "pseudo_family": pseudo_family,
+                #"pseudo_family": pseudo_family,
                 "pw": {
                     "parameters": {
                 "CONTROL": {
@@ -282,7 +282,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
                       },
                     },
             },
-            "base_final_scf": {"pseudo_family": pseudo_family,},
+            #"base_final_scf": {"pseudo_family": pseudo_family,},
             }
 
         overrides_pwscf = recursive_merge(overrides, overrides_all)
