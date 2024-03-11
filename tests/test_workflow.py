@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
-"""Tests for the `MusconvWorkChain` class."""
+"""Tests for the `IsolatedImpurityWorkChain` class."""
 import pytest
 from aiida import orm
 from aiida.engine.utils import instantiate_process
 from aiida.manage.manager import get_manager
 
-from aiida_musconv.workflows.musconv import MusconvWorkChain
+from aiida_impuritysupercellconv.workflows.impuritysupercellconv import IsolatedImpurityWorkChain
 
 
 @pytest.fixture
 def generate_builder(generate_structure, fixture_code):
-    """Generate default inputs for `MusconvWorkChain`"""
+    """Generate default inputs for `IsolatedImpurityWorkChain`"""
 
     def _get_builder():
-        """Generate default builder for `MusconvWorkChain`"""
+        """Generate default builder for `IsolatedImpurityWorkChain`"""
 
         inputstructure = generate_structure("Si")
         # code = fixture_code("quantumespresso.pw")
 
-        builder = MusconvWorkChain.get_builder()
+        builder = IsolatedImpurityWorkChain.get_builder()
         builder.structure = inputstructure
 
         paramters = {
@@ -56,7 +56,7 @@ def generate_builder(generate_structure, fixture_code):
 
 @pytest.fixture
 def generate_workchain(generate_builder):
-    """Generate an instance of MusconvWorkChain"""
+    """Generate an instance of IsolatedImpurityWorkChain"""
 
     def _generate_workchain(exit_code=None):
         builder = generate_builder()
@@ -65,7 +65,7 @@ def generate_workchain(generate_builder):
 
         # if exit_code is not None:
         #    node = generate_calc_job_node(
-        #    entry_point_calc_job, fixture_localhost, test_name, inputs["MusconvWorkChain"]
+        #    entry_point_calc_job, fixture_localhost, test_name, inputs["IsolatedImpurityWorkChain"]
         #    )
         #    node.set_process_state(ProcessState.FINISHED)
         #    node.set_exit_status(exit_code.status)
@@ -77,7 +77,7 @@ def generate_workchain(generate_builder):
 
 def test_initialize(aiida_profile, generate_workchain):
     """
-    Test `MusconvWorkChain.initialization`.
+    Test `IsolatedImpurityWorkChain.initialization`.
     This checks that we can create the workchain successfully,
      and that it is initialised into the correct state.
     """

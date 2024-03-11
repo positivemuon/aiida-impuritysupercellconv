@@ -6,7 +6,7 @@ from aiida.engine import run, submit
 from aiida.plugins import DataFactory
 from pymatgen.io.cif import CifParser
 
-from aiida_musconv.workflows.musconv import MusconvWorkChain
+from aiida_impuritysupercellconv.workflows.impuritysupercellconv import IsolatedImpurityWorkChain
 
 load_profile()
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     py_struc = parser.get_structures(primitive=True)[0]
     aiida_structure = StructureData(pymatgen=py_struc)
 
-    builder = MusconvWorkChain.get_builder()
+    builder = IsolatedImpurityWorkChain.get_builder()
     structure = aiida_structure
     builder.structure = structure
     # builder.max_iter_num = orm.Int(3)                  #optional

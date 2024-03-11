@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" AiiDa MusconvWorkChain class """
+""" AiiDa IsolatedImpurityWorkChain class """
 import numpy as np
 from typing import Union
 from aiida import orm
@@ -11,8 +11,8 @@ from aiida.plugins import WorkflowFactory, DataFactory
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinType
 
-from musconv.chkconv import ChkConvergence
-from musconv.supcgen import ScGenerators
+from impuritysupercellconv.chkconv import ChkConvergence
+from impuritysupercellconv.supcgen import ScGenerators
 
 from aiida.orm import StructureData as LegacyStructureData
 
@@ -23,7 +23,7 @@ original_PwRelaxWorkChain = WorkflowFactory('quantumespresso.pw.relax')
 
 
 def PwRelaxWorkChain_override_validator(inputs,ctx=None):
-    """validate inputs for musconv.relax; actually, it is
+    """validate inputs for impuritysupercellconv.relax; actually, it is
     just a way to avoid defining it if we do not want it. 
     otherwise the default check is done and it will excepts. 
     """
@@ -118,7 +118,7 @@ def get_kpoints(aiida_struc, k_density):
     return kpoints
 
 
-class MusconvWorkChain(ProtocolMixin, WorkChain):
+class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
     """WorkChain for finding converged supercell for interstitial impurity calculation"""
 
     @classmethod
@@ -418,7 +418,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
             return conv_res.value == False
         except:
             self.report(
-                f"Exiting MusconvWorkChain,Error in fitting the forces of supercell,"
+                f"Exiting IsolatedImpurityWorkChain,Error in fitting the forces of supercell,"
                 "iteration no. <{self.ctx.n}>) to an exponential, maybe force data not exponential"
             )
             return self.exit_codes.ERROR_FITTING_FORCES_TO_EXPONENTIAL
@@ -443,7 +443,7 @@ class MusconvWorkChain(ProtocolMixin, WorkChain):
     def exit_max_iteration_exceeded(self):
         """Exit code if max iteration number is reached"""
         self.report(
-            f"Exiting MusconvWorkChain, Coverged supercell NOT achieved, next iter num"
+            f"Exiting IsolatedImpurityWorkChain, Coverged supercell NOT achieved, next iter num"
             " <{self.ctx.n}> is greater than max iteration number {self.inputs.max_iter_num.value}"
         )
         return self.exit_codes.ERROR_NUM_CONVERGENCE_ITER_EXCEEDED
@@ -471,7 +471,7 @@ def iterdict(d,key):
 def recursive_consistency_check(input_dict):
     import copy
     
-    """Validation of the inputs provided for the MusconvWorkChain.
+    """Validation of the inputs provided for the IsolatedImpurityWorkChain.
     """
     
     parameters = copy.deepcopy(input_dict)
@@ -486,7 +486,7 @@ def recursive_consistency_check(input_dict):
     if "relax" in parameters :
         if len(parameters["relax"]["base"]["pw"]["parameters"].get_dict()) > 0:
             if parameters["relax"]["base"]["pw"]["parameters"].get_dict()["CONTROL"]["calculation"] != 'relax':
-                unconsistency_sentence+=f'Checking inputs.musconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
+                unconsistency_sentence+=f'Checking inputs.impuritysupercellconv.relax.base.pw.parameters.CONTROL.calculation: can be only "relax". No cell relaxation should be performed.'
             
             
             if 'base_final_scf' in parameters['relax']:
@@ -495,7 +495,7 @@ def recursive_consistency_check(input_dict):
                 elif parameters['relax']['base_final_scf'] ==  {}:
                     pass
                 else:
-                    unconsistency_sentence+=f'Checking inputs.musconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
+                    unconsistency_sentence+=f'Checking inputs.impuritysupercellconv.relax.base_final_scf: should not be set, the final scf after relaxation is not supported in the MusConvWorkChain.'
     
     
     
@@ -505,11 +505,11 @@ def recursive_consistency_check(input_dict):
 
     if value_input_pwscf != value_overrides:
         wrong_inputs_pwscf.append('tprnfor')
-        unconsistency_sentence += f'Checking inputs.musconv.pwscf.pw.parameters input: "tprnfor" is not correct. You provided the value "{value_input_pwscf}", but only "{value_overrides}" is consistent with your settings.\n'
+        unconsistency_sentence += f'Checking inputs.impuritysupercellconv.pwscf.pw.parameters input: "tprnfor" is not correct. You provided the value "{value_input_pwscf}", but only "{value_overrides}" is consistent with your settings.\n'
 
     return unconsistency_sentence
 
-def input_validator(inputs,_,caller="MusconvWorkchain"):
+def input_validator(inputs,_,caller="IsolatedImpurityWorkChain"):
     inconsistency = recursive_consistency_check(inputs)
     if len(inconsistency) > 1:
         if caller == "FindMuonWorkchain": 

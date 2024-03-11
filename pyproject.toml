@@ -3,9 +3,9 @@ requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "aiida-musconv"
-dynamic = ["version"] # read from aiida_musconv/__init__.py
-description = "aiida-musconv is a plugin that allows to obtain converged supercell size for an interstitial impurity calculation."
+name = "aiida-impuritysupercellconv"
+dynamic = ["version"] # read from aiida_impuritysupercellconv/__init__.py
+description = "aiida-impuritysupercellconv is a plugin that allows to obtain converged supercell size for an interstitial impurity calculation."
 authors = [{name = "Muon  group Parma"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Source = "https://github.com/positivemuon/aiida-musconv"
+Source = "https://github.com/positivemuon/aiida-impuritysupercellconv"
 
 [project.optional-dependencies]
 docs = [
@@ -47,10 +47,10 @@ tests = [
 ]
 
 [project.entry-points."aiida.workflows"]
-"musconv" = "aiida_musconv.workflows.musconv:MusconvWorkChain"
+"impuritysupercellconv" = "aiida_impuritysupercellconv.workflows.impuritysupercellconv:IsolatedImpurityWorkChain"
 
 [tool.flit.module]
-name = "aiida_musconv"
+name = "aiida_impuritysupercellconv"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
