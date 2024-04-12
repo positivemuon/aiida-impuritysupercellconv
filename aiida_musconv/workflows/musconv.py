@@ -51,7 +51,7 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
 
 
 @calcfunction
-def check_if_conv_achieved(aiida_struc, traj_out):
+def check_if_conv_achieved(aiida_struc, traj_out, conv_thr):
     """An aiida calc function that checks if a supercell is converged
     for intersitial defect calculations using SCF forces
     """
@@ -61,7 +61,9 @@ def check_if_conv_achieved(aiida_struc, traj_out):
     ase_struc = aiida_struc.get_ase()
 
     # Calls the check supercell convergence class
-    csc = ChkConvergence(ase_struc, atm_forces)
+    csc = ChkConvergence(ase_struc = ase_struc,
+                         atomic_forces = atm_forces,
+                         conv_thr = conv_thr.value)
     cond = csc.apply_first_crit()
     cond2 = csc.apply_2nd_crit()
 
@@ -110,6 +112,13 @@ class MusconvWorkChain(WorkChain):
             required=False,
             help="The minimum length of the smallest"
             " lattice vector for the first generated supercell ",
+        )
+        spec.input(
+            "conv_thr", 
+            valid_type=orm.Float, 
+            default=lambda: orm.Float(0.0257), 
+            required=False, 
+            help="Force convergence thresh in eV/Ang, default is 1e-3 au or 0.0257 ev/A",
         )
         spec.input(
             "max_iter_num",
@@ -220,7 +229,9 @@ class MusconvWorkChain(WorkChain):
     def continue_iter(self):
         """check convergence and decide if to continue the loop"""
         try:
-            conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu, self.ctx.traj_out)
+            conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu,
+                                              self.ctx.traj_out, 
+                                              self.inputs.conv_thr)
             return conv_res.value == False
         except:
             self.report(
