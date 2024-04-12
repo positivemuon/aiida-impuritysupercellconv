@@ -83,7 +83,7 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
 
 
 @calcfunction
-def check_if_conv_achieved(aiida_struc, traj_out):
+def check_if_conv_achieved(aiida_struc, traj_out, conv_thr):
     """An aiida calc function that checks if a supercell is converged
     for intersitial defect calculations using SCF forces
     """
@@ -93,7 +93,9 @@ def check_if_conv_achieved(aiida_struc, traj_out):
     ase_struc = aiida_struc.get_ase()
 
     # Calls the check supercell convergence class
-    csc = ChkConvergence(ase_struc, atm_forces)
+    csc = ChkConvergence(ase_struc = ase_struc,
+                         atomic_forces = atm_forces,
+                         conv_thr = conv_thr.value)
     cond = csc.apply_first_crit()
     cond2 = csc.apply_2nd_crit()
 
@@ -139,6 +141,13 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             required=False,
             help="The minimum length of the smallest"
             " lattice vector for the first generated supercell ",
+        )
+        spec.input(
+            "conv_thr", 
+            valid_type=orm.Float, 
+            default=lambda: orm.Float(0.0257), 
+            required=False, 
+            help="Force convergence thresh in eV/Ang, default is 1e-3 au or 0.0257 ev/A",
         )
         spec.input(
             "max_iter_num",
@@ -239,6 +248,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         relax_unitcell: bool = False, 
         options = None,
         min_length: float = None,
+        conv_thr: float = 0.0257,
         kpoints_distance: float = 0.401,
         pseudo_family: str ="SSSP/1.2/PBE/efficiency",
         max_iter_num: int = 4,
@@ -254,6 +264,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         :param options: A dictionary of options that will be recursively set for the ``metadata.options`` input of all
             the ``CalcJobs`` that are nested in this workchain.
         :param min_length: The minimum length of the smallest lattice vector for the first generated supercell.
+        :param conv_thr: The force convergence threshold in eV/Ang, default is 1e-3 au or 0.0257 ev/A
         :param kpoints_distance: the minimum desired distance in 1/Å between k-points in reciprocal space.
         :param pseudo_family: the label of the pseudo family.
         :param max_iter_num: Maximum number of iteration in the supercell convergence loop.
@@ -323,6 +334,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         
         #we can set this also wrt to some protocol
         builder.min_length=orm.Float(min_length)
+        builder.conv_thr=orm.Float(conv_thr)
         builder.kpoints_distance=orm.Float(kpoints_distance)
         builder.max_iter_num=orm.Int(max_iter_num)
         
@@ -414,7 +426,10 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
     def continue_iter(self):
         """check convergence and decide if to continue the loop"""
         try:
-            conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu, self.ctx.traj_out)
+            if not "conv_thr" in self.ctx: self.ctx.conv_thr = self.inputs.conv_thr
+            conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu,
+                                              self.ctx.traj_out, 
+                                              self.ctx.conv_thr)
             return conv_res.value == False
         except:
             self.report(
