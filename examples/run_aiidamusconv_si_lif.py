@@ -31,6 +31,7 @@ if __name__ == "__main__":
     builder.structure = structure
     # builder.max_iter_num = orm.Int(3)                  #optional
     # builder.min_length = orm.Float(5.2)                #optional
+    # builder.conv_thr = orm.Float(0.1)                #optional
     # builder.kpoints_distance = orm.Float(0.401)        #optional
     ##optional depending if the label is same
     builder.pseudofamily = orm.Str('SSSP/1.3/PBE/efficiency')
