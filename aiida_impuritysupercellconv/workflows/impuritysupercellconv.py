@@ -11,8 +11,8 @@ from aiida.plugins import WorkflowFactory, DataFactory
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinType
 
-from impuritysupercellconv.chkconv import ChkConvergence
-from impuritysupercellconv.supcgen import ScGenerators
+from musconv.chkconv import ChkConvergence
+from musconv.supcgen import ScGenerators
 
 from aiida.orm import StructureData as LegacyStructureData
 
