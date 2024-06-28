@@ -130,7 +130,7 @@ class MusconvWorkChain(WorkChain):
         spec.input(
             "kpoints_distance",
             valid_type=orm.Float,
-            default=lambda: orm.Float(0.401),
+            default=lambda: orm.Float(0.301),
             required=False,
             help="The minimum desired distance in 1/Å between k-points in reciprocal space.",
         )
