@@ -98,7 +98,7 @@ def check_if_conv_achieved(aiida_struc, traj_out, conv_thr):
                          conv_thr = conv_thr.value)
     cond = csc.apply_first_crit()
     cond2 = csc.apply_2nd_crit()
-
+    #print(cond,cond2)
     if cond is True and all(cond2):
         return orm.Bool(True)
     else:
@@ -249,7 +249,8 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         options = None,
         min_length: float = None,
         conv_thr: float = 0.0257,
-        kpoints_distance: float = 0.401,
+        kpoints_distance: float = 0.301,
+        charged_supercell: bool = False,
         pseudo_family: str ="SSSP/1.2/PBE/efficiency",
         max_iter_num: int = 4,
         **kwargs,
@@ -266,6 +267,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         :param min_length: The minimum length of the smallest lattice vector for the first generated supercell.
         :param conv_thr: The force convergence threshold in eV/Ang, default is 1e-3 au or 0.0257 ev/A
         :param kpoints_distance: the minimum desired distance in 1/Å between k-points in reciprocal space.
+        :param charged_supercell: the charge in the supercell. Default is false as here we don't care about the muon charge state.
         :param pseudo_family: the label of the pseudo family.
         :param max_iter_num: Maximum number of iteration in the supercell convergence loop.
         :return: a process builder instance with all inputs defined ready for launch.
@@ -288,8 +290,13 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                     "parameters": {
                 "CONTROL": {
                     "tprnfor": True,
-                    "nstep": 200
                     },
+                "SYSTEM": {
+                    "tot_charge":1 if charged_supercell else 0,
+                },
+                "ELECTRONS":{
+                    'electron_maxstep': 200,
+                }
                       },
                     },
             },
@@ -304,7 +311,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 protocol=protocol,
                 overrides=overrides_pwscf.get("base",None),
                 #overrides=overrides_pwscf,
-                #pseudo_family=pseudo_family,
+                pseudo_family=pseudo_family,
                 **kwargs,
                 )
         
@@ -320,7 +327,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 structure,
                 protocol=protocol,
                 overrides=overrides_pwscf,
-                #pseudo_family=pseudo_family,
+                pseudo_family=pseudo_family,
                 relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                 **kwargs,
                 )
