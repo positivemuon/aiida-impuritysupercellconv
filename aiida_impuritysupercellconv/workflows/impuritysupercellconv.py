@@ -170,7 +170,13 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             required=False,
             help="The label of the pseudo family",
         )
-
+        spec.input(
+            "charge_supercell",
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(True),
+            required=False,
+            help="To run charged supercell for positive muon or not (neutral supercell)",
+        )
         spec.expose_inputs(
             PwBaseWorkChain,
             namespace="pwscf",
