@@ -298,7 +298,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                     "tprnfor": True,
                     },
                 "SYSTEM": {
-                    "tot_charge":1 if charge_supercell else 0,
+                    "tot_charge":1.0 if charge_supercell else 0.0,
                 },
                 "ELECTRONS":{
                     'electron_maxstep': 200,
