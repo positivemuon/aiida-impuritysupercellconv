@@ -250,7 +250,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         min_length: float = None,
         conv_thr: float = 0.0257,
         kpoints_distance: float = 0.301,
-        charged_supercell: bool = False,
+        charged_supercell: bool = True,
         pseudo_family: str ="SSSP/1.2/PBE/efficiency",
         max_iter_num: int = 4,
         **kwargs,
