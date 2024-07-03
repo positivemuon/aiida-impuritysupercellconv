@@ -332,7 +332,8 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 pw_code,
                 structure,
                 protocol=protocol,
-                overrides=overrides_pwscf,
+                #overrides=overrides_pwscf, #IJO, we don't ever want total charge=1.0 for the unitcell relax without muon
+                overrides=overrides,
                 pseudo_family=pseudo_family,
                 relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                 **kwargs,
