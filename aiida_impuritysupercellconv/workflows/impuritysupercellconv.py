@@ -163,13 +163,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             required=False,
             help="The minimum desired distance in 1/Å between k-points in reciprocal space.",
         )
-        spec.input(
-            "charge_supercell",
-            valid_type=orm.Bool,
-            default=lambda: orm.Bool(True),
-            required=False,
-            help="To run charged supercell for positive muon or not (neutral supercell)",
-        )
+       
         spec.input(
             "pseudo_family",
             valid_type=orm.Str,
