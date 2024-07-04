@@ -252,7 +252,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         structure: Union[StructureData, LegacyStructureData],
         protocol: str = None,
         overrides: dict = None,
-        relax_unitcell: bool = False, 
+        relax_unitcell: bool = True, 
         options = None,
         min_length: float = None,
         conv_thr: float = 0.0257,
@@ -311,7 +311,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             }
 
         overrides_pwscf = recursive_merge(overrides, overrides_all)
-        
+                
         builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
@@ -334,7 +334,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 structure,
                 protocol=protocol,
                 #overrides=overrides_pwscf, #IJO, we don't ever want total charge=1.0 for the unitcell relax without muon
-                overrides=overrides,
+                overrides=overrides_pwscf.get("pre_relax",None),
                 pseudo_family=pseudo_family,
                 relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                 **kwargs,
