@@ -164,6 +164,13 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             help="The minimum desired distance in 1/Å between k-points in reciprocal space.",
         )
         spec.input(
+            "charge_supercell",
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(True),
+            required=False,
+            help="To run charged supercell for positive muon or not (neutral supercell)",
+        )
+        spec.input(
             "pseudo_family",
             valid_type=orm.Str,
             default=lambda: orm.Str("SSSP/1.2/PBE/efficiency"),
@@ -297,9 +304,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 "CONTROL": {
                     "tprnfor": True,
                     },
-                "SYSTEM": {
-                    "tot_charge":1.0 if charge_supercell else 0.0,
-                },
+                #"SYSTEM": {
+                #    "tot_charge":1 if charge_supercell else 0,
+                #},
                 "ELECTRONS":{
                     'electron_maxstep': 200,
                 }
@@ -354,6 +361,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         
         builder.structure = structure
         builder.pseudo_family = orm.Str(pseudo_family)
+        builder.charge_supercell = orm.Bool(charge_supercell)
         
         return builder
     
@@ -411,6 +419,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         """Input Qe-pw structure and run pw"""
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace="pwscf"))
 
+        if hasattr(self.inputs,"charge_supercell"):
+            inputs.pw.parameters = update_charge(inputs.pw.parameters,self.inputs.charge_supercell)  
+                  
         inputs.pw.structure = self.ctx.sup_struc_mu
         inputs.pw.pseudos = get_pseudos(
             self.ctx.sup_struc_mu, self.inputs.pseudo_family.value
@@ -547,3 +558,10 @@ def input_validator(inputs,_,caller="IsolatedImpurityWorkChain"):
             raise ValueError('\n'+inconsistency+'\n Please check the inputs of your MusConvWorkChain instance or use "get_builder_from_protocol()" method to populate correctly the inputs.\n')
     
     return #cannot return anything otherwise it Raise an error.
+
+@calcfunction
+def update_charge(parameters,charge):
+    """Update the charge in the parameters"""
+    parameters = parameters.get_dict()
+    parameters["SYSTEM"]["tot_charge"] = 1 if charge else 0
+    return orm.Dict(dict=parameters)
