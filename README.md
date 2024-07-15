@@ -2,6 +2,7 @@
 
 An [AiiDA](www.aiida.net) workflow plugin that allows to obtain  converged supercell size and or the supercell transformation matrix for an interstitial impurity calculation. This is obtained by converging the supercell size with respect to the induced forces at host atomic by an intersitial impurity at a Voronoi site. Forces are obtained from one shot SCF DFT calculations with  the [Quantum-Espresso code using its aiida plugin](https://aiida-quantumespresso.readthedocs.io/en/latest/).
 
+**Please note**: the code supports Quantum ESPRESSO versions higher or equal than v7.1 .
 
 ## Dependencies
 To run the aiida-IsolatedImpurityWorkChain, [impuritysupercellconv](https://github.com/positivemuon/impuritysupercellconv) or on impuritysupercellconv [pypi](https://pypi.org/project/impuritysupercellconv/0.0.1/) page, aiida-core, plugin installations and aiida-quantum espresso code and computer setups are required.

@@ -42,12 +42,14 @@ def init_supcgen(aiida_struc, min_length):
 
     # Calls the supercell (SC) generation class
     scg = ScGenerators(p_st)
-    p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
+    p_scst_mu, sc_mat, mu_frac_coord, p_scst_without_mu = scg.initialize(min_length.value)
 
     if isinstance(aiida_struc,StructureData):
         ad_scst = StructureData(pymatgen=p_scst_mu)
+        ad_scst_without_mu = StructureData(pymatgen=p_scst_without_mu)
     elif isinstance(aiida_struc,LegacyStructureData):
         ad_scst = LegacyStructureData(pymatgen=p_scst_mu)
+        ad_scst_without_mu = LegacyStructureData(pymatgen=p_scst_without_mu)
 
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
@@ -55,7 +57,7 @@ def init_supcgen(aiida_struc, min_length):
     vor_node = orm.ArrayData()
     vor_node.set_array("Voronoi_site", np.array(mu_frac_coord))
 
-    return {"SC_struc": ad_scst, "SCmat": scmat_node, "Vor_site": vor_node}
+    return {"SC_struc": ad_scst, "SCmat": scmat_node, "Vor_site": vor_node, "SC_struc_without_mu": ad_scst_without_mu,}
 
 
 @calcfunction
@@ -69,27 +71,31 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
 
     # Calls the supercell (SC) generation class
     scg = ScGenerators(p_st)
-    p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
+    p_scst_mu, sc_mat, p_scst_without_mu = scg.re_initialize(p_scst, mu_frac_coord)
 
     if isinstance(aiida_struc,StructureData):
-        ad_scst_out = StructureData(pymatgen=p_scst_mu)
+        ad_scst = StructureData(pymatgen=p_scst_mu)
+        ad_scst_without_mu = StructureData(pymatgen=p_scst_without_mu)
     elif isinstance(aiida_struc,LegacyStructureData):
-        ad_scst_out = LegacyStructureData(pymatgen=p_scst_mu)
-
+        ad_scst = LegacyStructureData(pymatgen=p_scst_mu)
+        ad_scst_without_mu = LegacyStructureData(pymatgen=p_scst_without_mu)
+    
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
 
-    return {"SC_struc": ad_scst_out, "SCmat": scmat_node}
+    return {"SC_struc": ad_scst, "SCmat": scmat_node, "SC_struc_without_mu": ad_scst_without_mu,}
 
 
 @calcfunction
-def check_if_conv_achieved(aiida_struc, traj_out, conv_thr):
+def check_if_conv_achieved(aiida_struc, traj_out, traj_out_no_muon, conv_thr):
     """An aiida calc function that checks if a supercell is converged
     for intersitial defect calculations using SCF forces
     """
 
-    atm_forc = traj_out.get_array("forces")[0]
-    atm_forces = np.array(atm_forc)
+    atm_forc_with_muon = traj_out.get_array("forces")[0]
+    atm_forc_without_muon = traj_out_no_muon.get_array("forces")[0]
+    atm_forc_without_muon = np.append(np.array(atm_forc_without_muon),np.array([[0.0,0.0,0.0]]), axis=0)
+    atm_forces = np.array(atm_forc_with_muon) - np.array(atm_forc_without_muon) 
     ase_struc = aiida_struc.get_ase()
 
     # Calls the check supercell convergence class
@@ -207,12 +213,12 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                     cls.inspect_relax
                 ),
             cls.init_supcell_gen,
-            cls.run_pw_scf,
+            cls.run_pw_double_scf,
             cls.inspect_run_get_forces,
             while_(cls.continue_iter)(
                 cls.increment_n_by_one,
                 if_(cls.iteration_num_not_exceeded)(
-                    cls.get_larger_cell, cls.run_pw_scf, cls.inspect_run_get_forces
+                    cls.get_larger_cell, cls.run_pw_double_scf, cls.inspect_run_get_forces
                 ).else_(
                     cls.exit_max_iteration_exceeded,
                 ),
@@ -303,6 +309,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 #},
                 "ELECTRONS":{
                     'electron_maxstep': 200,
+                    'mixing_beta': 0.3,
                 }
                       },
                     },
@@ -370,6 +377,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
 
         inputs = AttributeDict(self.exposed_inputs(PwRelaxWorkChain, namespace='relax'))
         inputs.structure = self.inputs.structure
+        inputs.base.pw.pseudos = get_pseudos(
+            inputs.structure, self.inputs.pseudo_family.value
+        )
         
         inputs.metadata.call_link_label = f'relax_step'
 
@@ -406,11 +416,12 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         result_ini = init_supcgen(self.ctx.structure, self.inputs.min_length)
 
         self.ctx.sup_struc_mu = result_ini["SC_struc"]
+        self.ctx.sup_struc_without_mu = result_ini["SC_struc_without_mu"]
         self.ctx.musite = result_ini["Vor_site"]
         self.ctx.sc_mat = result_ini["SCmat"]
 
-    def run_pw_scf(self):
-        """Input Qe-pw structure and run pw"""
+    def run_pw_double_scf(self):
+        """Input Qe-pw structure and run pw with and without the muon (but the charge, if any) in the cell."""
         inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace="pwscf"))
 
         if hasattr(self.inputs,"charge_supercell"):
@@ -424,30 +435,43 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             self.ctx.sup_struc_mu, self.inputs.kpoints_distance.value
         )
 
-        running = self.submit(PwBaseWorkChain, **inputs)
-        self.report(f"running SCF calculation {running.pk}")
+        runs = {}
+        runs["with_muon"] = self.submit(PwBaseWorkChain, **inputs)
+        self.report(f"running SCF calculation with muon: {runs['with_muon'].pk}")
+        
+        # now without muon to have a reference for the force difference.
+        inputs.pw.structure = self.ctx.sup_struc_without_mu
+        inputs.pw.pseudos = get_pseudos(
+            self.ctx.sup_struc_without_mu, self.inputs.pseudo_family.value
+        )
+        runs["without_muon"] = self.submit(PwBaseWorkChain, **inputs)
+        self.report(f"running SCF calculation without muon: {runs['without_muon'].pk}")
+        
 
-        return ToContext(calculation_run=running)
+        return ToContext(**runs)
 
     def inspect_run_get_forces(self):
         """Inspect pw run and get forces"""
-        calculation = self.ctx.calculation_run
+        self.ctx.traj_out = {}
+        for run in ["with_muon", "without_muon"]:
+            calculation = self.ctx[run]
 
-        if not calculation.is_finished_ok:
-            self.report(
-                f"PwBaseWorkChain<{calculation.pk}> failed"
-                "with exit status {calculation.exit_status}"
-            )
-            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
-        else:
-            self.ctx.traj_out = calculation.outputs.output_trajectory
+            if not calculation.is_finished_ok:
+                self.report(
+                    f"PwBaseWorkChain<{calculation.pk}> failed"
+                    "with exit status {calculation.exit_status}"
+                )
+                return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
+            else:
+                self.ctx.traj_out[run] = calculation.outputs.output_trajectory
 
     def continue_iter(self):
         """check convergence and decide if to continue the loop"""
         try:
             if not "conv_thr" in self.ctx: self.ctx.conv_thr = self.inputs.conv_thr
             conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu,
-                                              self.ctx.traj_out, 
+                                              self.ctx.traj_out["with_muon"],
+                                              self.ctx.traj_out["without_muon"],
                                               self.ctx.conv_thr)
             return conv_res.value == False
         except:
@@ -472,6 +496,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         )
 
         self.ctx.sup_struc_mu = result_reini["SC_struc"]
+        self.ctx.sup_struc_without_mu = result_reini["SC_struc_without_mu"]
         self.ctx.sc_mat = result_reini["SCmat"]
 
     def exit_max_iteration_exceeded(self):
@@ -487,8 +512,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         self.report("Setting Outputs")
         self.out("Converged_supercell", self.ctx.sup_struc_mu)
         self.out("Converged_SCmatrix", self.ctx.sc_mat)
-        
-
+    
 
 # Functions for the input validation.
 def iterdict(d,key):
