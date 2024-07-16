@@ -15,6 +15,9 @@ from musconv.chkconv import ChkConvergence
 from musconv.supcgen import ScGenerators
 
 from aiida.orm import StructureData as LegacyStructureData
+from aiida_quantumespresso.data.hubbard_structure import HubbardStructureData
+
+from aiida_muon.workflows.utils import check_get_hubbard_u_parms
 
 StructureData = DataFactory("atomistic.structure")
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
@@ -34,7 +37,17 @@ def PwRelaxWorkChain_override_validator(inputs,ctx=None):
     
 PwRelaxWorkChain.spec().inputs.validator = PwRelaxWorkChain_override_validator
 
+@calcfunction
+def create_hubbard_structure(structure: LegacyStructureData,hubbard_dict: dict):
+    hubbard_structure = HubbardStructureData.from_structure(structure)
+    for kind, U in hubbard_dict.items():
+        hubbard_structure.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+    return hubbard_structure
 
+def assign_hubbard_parameters(structure: StructureData, hubbard_dict):
+    for kind, U in hubbard_dict.items():
+        structure.hubbard.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+        
 @calcfunction
 def init_supcgen(aiida_struc, min_length):
     """An aiida calc function that initializes supercell generation"""
@@ -50,6 +63,16 @@ def init_supcgen(aiida_struc, min_length):
     elif isinstance(aiida_struc,LegacyStructureData):
         ad_scst = LegacyStructureData(pymatgen=p_scst_mu)
         ad_scst_without_mu = LegacyStructureData(pymatgen=p_scst_without_mu)
+        if isinstance(aiida_struc, HubbardStructureData):
+            hubbard_dict = check_get_hubbard_u_parms(aiida_struc.get_pymatgen())
+            ad_scst = HubbardStructureData.from_structure(ad_scst)
+            for kind, U in hubbard_dict.items():
+                ad_scst.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+            
+            ad_scst_without_mu = HubbardStructureData.from_structure(ad_scst_without_mu)
+            for kind, U in hubbard_dict.items():
+                ad_scst_without_mu.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+            
 
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
@@ -79,6 +102,15 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
     elif isinstance(aiida_struc,LegacyStructureData):
         ad_scst = LegacyStructureData(pymatgen=p_scst_mu)
         ad_scst_without_mu = LegacyStructureData(pymatgen=p_scst_without_mu)
+        if isinstance(aiida_struc, HubbardStructureData):
+            hubbard_dict = check_get_hubbard_u_parms(aiida_struc.get_pymatgen())
+            ad_scst = HubbardStructureData.from_structure(ad_scst)
+            for kind, U in hubbard_dict.items():
+                ad_scst.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+            
+            ad_scst_without_mu = HubbardStructureData.from_structure(ad_scst_without_mu)
+            for kind, U in hubbard_dict.items():
+                ad_scst_without_mu.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
     
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
