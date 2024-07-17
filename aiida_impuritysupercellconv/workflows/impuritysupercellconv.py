@@ -42,6 +42,8 @@ def create_hubbard_structure(structure: LegacyStructureData,hubbard_dict: dict):
     hubbard_structure = HubbardStructureData.from_structure(structure)
     for kind, U in hubbard_dict.items():
         hubbard_structure.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+        
+    hubbard_structure.hubbard = Hubbard.from_list(hubbard_structure.hubbard.to_list(), projectors="atomic")
     return hubbard_structure
 
 def assign_hubbard_parameters(structure: StructureData, hubbard_dict):
@@ -69,9 +71,13 @@ def init_supcgen(aiida_struc, min_length):
             for kind, U in hubbard_dict.items():
                 ad_scst.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
             
+            ad_scst.hubbard = Hubbard.from_list(ad_scst.hubbard.to_list(), projectors="atomic")
+
             ad_scst_without_mu = HubbardStructureData.from_structure(ad_scst_without_mu)
             for kind, U in hubbard_dict.items():
                 ad_scst_without_mu.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+                
+            ad_scst_without_mu.hubbard = Hubbard.from_list(ad_scst_without_mu.hubbard.to_list(), projectors="atomic")
             
 
     scmat_node = orm.ArrayData()
@@ -108,9 +114,13 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
             for kind, U in hubbard_dict.items():
                 ad_scst.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
             
+            ad_scst.hubbard = Hubbard.from_list(ad_scst.hubbard.to_list(), projectors="atomic")
+
             ad_scst_without_mu = HubbardStructureData.from_structure(ad_scst_without_mu)
             for kind, U in hubbard_dict.items():
                 ad_scst_without_mu.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
+                
+            ad_scst_without_mu.hubbard = Hubbard.from_list(ad_scst_without_mu.hubbard.to_list(), projectors="atomic")
     
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
