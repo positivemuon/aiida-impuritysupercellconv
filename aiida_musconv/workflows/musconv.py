@@ -7,7 +7,6 @@ from aiida.engine import ToContext, WorkChain, calcfunction, if_, while_
 from aiida.plugins import CalculationFactory
 from musconv.chkconv import ChkConvergence
 from musconv.supcgen import ScGenerators
-from aiida_quantumespresso.common.hubbard import Hubbard
 
 
 @calcfunction
