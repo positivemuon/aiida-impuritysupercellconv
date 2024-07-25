@@ -11,8 +11,7 @@ from aiida.plugins import WorkflowFactory, DataFactory
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinType
 
-from musconv.chkconv import ChkConvergence
-from musconv.supcgen import ScGenerators
+from .utils import ChkConvergence, ScGenerators
 
 from aiida.orm import StructureData as LegacyStructureData
 from aiida_quantumespresso.data.hubbard_structure import HubbardStructureData
@@ -58,7 +57,10 @@ def init_supcgen(aiida_struc, min_length):
 
     # Calls the supercell (SC) generation class
     scg = ScGenerators(p_st)
-    p_scst_mu, sc_mat, mu_frac_coord, p_scst_without_mu = scg.initialize(min_length.value)
+    #p_scst_mu, sc_mat, mu_frac_coord, p_scst_without_mu = scg.initialize(min_length.value)
+    p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
+    p_scst_without_mu = p_scst_mu.copy()
+    p_scst_without_mu.pop(-1)    #pop out the muon since it is the last that was appendded
 
     if isinstance(aiida_struc,StructureData):
         ad_scst = StructureData(pymatgen=p_scst_mu)
@@ -101,7 +103,10 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
 
     # Calls the supercell (SC) generation class
     scg = ScGenerators(p_st)
-    p_scst_mu, sc_mat, p_scst_without_mu = scg.re_initialize(p_scst, mu_frac_coord)
+    #p_scst_mu, sc_mat, p_scst_without_mu = scg.re_initialize(p_scst, mu_frac_coord)
+    p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
+    p_scst_without_mu = p_scst_mu.copy()
+    p_scst_without_mu.pop(-1)    #pop out the muon since it is the last that was appendded
 
     if isinstance(aiida_struc,StructureData):
         ad_scst = StructureData(pymatgen=p_scst_mu)
