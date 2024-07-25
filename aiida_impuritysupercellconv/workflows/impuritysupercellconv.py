@@ -232,6 +232,13 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             required=False,
             help="To run charged supercell for positive muon or not (neutral supercell)",
         )
+        spec.input(
+            "relax_unitcell",
+            valid_type=orm.Bool,
+            default=lambda: orm.Bool(False),
+            required=False,
+            help="To relax the forces on the input unit structure or not",
+        )
         spec.expose_inputs(
             PwBaseWorkChain,
             namespace="pwscf",
@@ -306,7 +313,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         structure: Union[StructureData, LegacyStructureData],
         protocol: str = None,
         overrides: dict = None,
-        relax_unitcell: bool = True, 
+        relax_unitcell: bool = False, 
         options = None,
         min_length: float = None,
         conv_thr: float = 0.0257,
