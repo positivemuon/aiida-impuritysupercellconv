@@ -23,7 +23,11 @@ dependencies = [
     "aiida-core>=2.0,<3",
     "aiida-quantumespresso>=4.2.0",
     "aiida-pseudo",
-    "musconv"
+    "pymatgen",
+    "pymatgen-analysis-defects; python_version >= '3.8'",
+    "ase",
+    "numpy",
+    "scipy"
 ]
 
 [project.urls]
