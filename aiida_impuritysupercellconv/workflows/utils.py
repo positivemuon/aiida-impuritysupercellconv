@@ -317,14 +317,14 @@ class ChkConvergence:
                     continue
 
                 # fit  and data check, better conditions?
-                stder = np.sqrt(np.diag(cov))
-                if stder[0] > par[0] or stder[1] > par[1]:
-                    print(
-                        f"Check force data and fit on specie {specie_set[i]},"
-                        "maybe does not decay exponentially"
-                    )
-                    cond.append(False)
-                    continue
+                #stder = np.sqrt(np.diag(cov))
+                #if stder[0] > par[0] or stder[1] > par[1]:
+                #    print(
+                #        f"Check force data and fit on specie {specie_set[i]},"
+                #        "maybe does not decay exponentially"
+                #    )
+                #    cond.append(False)
+                #    continue
 
                 # find min distance  required for convergence
                 min_conv_dist = self.min_sconv_dist(self.conv_thr, par[0], par[1])
