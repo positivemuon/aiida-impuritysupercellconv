@@ -19,10 +19,10 @@ if structuredata=="new":
 else:
     StructureData = LegacyStructureData
     
-system = "LiF", #LiF, Si
+system = "Si" #LiF, Si
 
 if __name__ == "__main__":
-    parser = CifParser(f"{system}.cif")
+    parser = CifParser(f"./{system}.cif")
     py_struc = parser.get_structures(primitive=True)[0]
     aiida_structure = StructureData(pymatgen=py_struc)
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # builder.conv_thr = orm.Float(0.1)                #optional
     # builder.kpoints_distance = orm.Float(0.401)        #optional
     ##optional depending if the label is same
-    builder.pseudofamily = orm.Str('SSSP/1.3/PBE/efficiency')
+    builder.pseudo_family = orm.Str('SSSP/1.3/PBE/efficiency')
 
     """N:B the pseudos and kpoints are no longer inputs in pwworkchain,
        already taken care of in the musConvworkchain
