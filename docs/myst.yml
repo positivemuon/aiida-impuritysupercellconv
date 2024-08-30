@@ -1,0 +1,15 @@
+# See docs at: https://mystmd.org/guide/frontmatter
+version: 1
+project:
+  id: c8403174-f775-4b0e-9320-8dcb64b6b4ef
+  # title:
+  # description:
+  # keywords: []
+  # authors: []
+  github: https://github.com/positivemuon/aiida-musconv
+  # To autogenerate a Table of Contents, run "myst init --write-toc"
+site:
+  template: book-theme
+  # options:
+  #   favicon: favicon.ico
+  #   logo: site_logo.png
