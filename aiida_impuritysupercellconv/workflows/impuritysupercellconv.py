@@ -11,7 +11,6 @@ from aiida.plugins import WorkflowFactory, DataFactory
 from aiida_quantumespresso.workflows.protocols.utils import ProtocolMixin
 from aiida_quantumespresso.common.types import ElectronicType, RelaxType, SpinType
 
-<<<<<<< HEAD
 from .utils import ChkConvergence, ScGenerators
 
 from aiida.orm import StructureData as LegacyStructureData
@@ -19,12 +18,6 @@ from aiida_quantumespresso.data.hubbard_structure import HubbardStructureData
 
 from aiida_muon.workflows.utils import check_get_hubbard_u_parms
 from aiida_quantumespresso.common.hubbard import Hubbard
-=======
-from impuritysupercellconv.chkconv import ChkConvergence
-from impuritysupercellconv.supcgen import ScGenerators
-
-from aiida.orm import StructureData as LegacyStructureData
->>>>>>> 0528fd4 (changing name)
 
 StructureData = DataFactory("atomistic.structure")
 PwBaseWorkChain = WorkflowFactory('quantumespresso.pw.base')
@@ -44,7 +37,6 @@ def PwRelaxWorkChain_override_validator(inputs,ctx=None):
     
 PwRelaxWorkChain.spec().inputs.validator = PwRelaxWorkChain_override_validator
 
-<<<<<<< HEAD
 @calcfunction
 def create_hubbard_structure(structure: LegacyStructureData,hubbard_dict: dict):
     hubbard_structure = HubbardStructureData.from_structure(structure)
@@ -58,9 +50,6 @@ def assign_hubbard_parameters(structure: StructureData, hubbard_dict):
     for kind, U in hubbard_dict.items():
         structure.hubbard.initialize_onsites_hubbard(kind, '3d', U, 'U', use_kinds=True)
         
-=======
-
->>>>>>> 0528fd4 (changing name)
 @calcfunction
 def init_supcgen(aiida_struc, min_length):
     """An aiida calc function that initializes supercell generation"""
@@ -68,7 +57,6 @@ def init_supcgen(aiida_struc, min_length):
 
     # Calls the supercell (SC) generation class
     scg = ScGenerators(p_st)
-<<<<<<< HEAD
     #p_scst_mu, sc_mat, mu_frac_coord, p_scst_without_mu = scg.initialize(min_length.value)
     p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
     p_scst_without_mu = p_scst_mu.copy()
@@ -94,14 +82,6 @@ def init_supcgen(aiida_struc, min_length):
                 
             ad_scst_without_mu.hubbard = Hubbard.from_list(ad_scst_without_mu.hubbard.to_list(), projectors="atomic")
             
-=======
-    p_scst_mu, sc_mat, mu_frac_coord = scg.initialize(min_length.value)
-
-    if isinstance(aiida_struc,StructureData):
-        ad_scst = StructureData(pymatgen=p_scst_mu)
-    elif isinstance(aiida_struc,LegacyStructureData):
-        ad_scst = LegacyStructureData(pymatgen=p_scst_mu)
->>>>>>> 0528fd4 (changing name)
 
     scmat_node = orm.ArrayData()
     scmat_node.set_array("sc_mat", sc_mat)
@@ -109,11 +89,7 @@ def init_supcgen(aiida_struc, min_length):
     vor_node = orm.ArrayData()
     vor_node.set_array("Voronoi_site", np.array(mu_frac_coord))
 
-<<<<<<< HEAD
     return {"SC_struc": ad_scst, "SCmat": scmat_node, "Vor_site": vor_node, "SC_struc_without_mu": ad_scst_without_mu,}
-=======
-    return {"SC_struc": ad_scst, "SCmat": scmat_node, "Vor_site": vor_node}
->>>>>>> 0528fd4 (changing name)
 
 
 @calcfunction
@@ -127,7 +103,6 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
 
     # Calls the supercell (SC) generation class
     scg = ScGenerators(p_st)
-<<<<<<< HEAD
     #p_scst_mu, sc_mat, p_scst_without_mu = scg.re_initialize(p_scst, mu_frac_coord)
     p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
     p_scst_without_mu = p_scst_mu.copy()
@@ -161,28 +136,10 @@ def re_init_supcgen(aiida_struc, ad_scst, vor_site):
 
 @calcfunction
 def check_if_conv_achieved(aiida_struc, traj_out, traj_out_no_muon, conv_thr):
-=======
-    p_scst_mu, sc_mat = scg.re_initialize(p_scst, mu_frac_coord)
-
-    if isinstance(aiida_struc,StructureData):
-        ad_scst_out = StructureData(pymatgen=p_scst_mu)
-    elif isinstance(aiida_struc,LegacyStructureData):
-        ad_scst_out = LegacyStructureData(pymatgen=p_scst_mu)
-
-    scmat_node = orm.ArrayData()
-    scmat_node.set_array("sc_mat", sc_mat)
-
-    return {"SC_struc": ad_scst_out, "SCmat": scmat_node}
-
-
-@calcfunction
-def check_if_conv_achieved(aiida_struc, traj_out):
->>>>>>> 0528fd4 (changing name)
     """An aiida calc function that checks if a supercell is converged
     for intersitial defect calculations using SCF forces
     """
 
-<<<<<<< HEAD
     atm_forc_with_muon = traj_out.get_array("forces")[0]
     atm_forc_without_muon = traj_out_no_muon.get_array("forces")[0]
     atm_forc_without_muon = np.append(np.array(atm_forc_without_muon),np.array([[0.0,0.0,0.0]]), axis=0)
@@ -196,17 +153,6 @@ def check_if_conv_achieved(aiida_struc, traj_out):
     cond = csc.apply_first_crit()
     cond2 = csc.apply_2nd_crit()
     #print(cond,cond2)
-=======
-    atm_forc = traj_out.get_array("forces")[0]
-    atm_forces = np.array(atm_forc)
-    ase_struc = aiida_struc.get_ase()
-
-    # Calls the check supercell convergence class
-    csc = ChkConvergence(ase_struc, atm_forces)
-    cond = csc.apply_first_crit()
-    cond2 = csc.apply_2nd_crit()
-
->>>>>>> 0528fd4 (changing name)
     if cond is True and all(cond2):
         return orm.Bool(True)
     else:
@@ -251,7 +197,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             " lattice vector for the first generated supercell ",
         )
         spec.input(
-<<<<<<< HEAD
             "conv_thr", 
             valid_type=orm.Float, 
             default=lambda: orm.Float(0.0257), 
@@ -259,8 +204,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             help="Force convergence thresh in eV/Ang, default is 1e-3 au or 0.0257 ev/A",
         )
         spec.input(
-=======
->>>>>>> 0528fd4 (changing name)
             "max_iter_num",
             valid_type=orm.Int,
             default=lambda: orm.Int(4),
@@ -270,18 +213,11 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         spec.input(
             "kpoints_distance",
             valid_type=orm.Float,
-<<<<<<< HEAD
             default=lambda: orm.Float(0.301),
             required=False,
             help="The minimum desired distance in 1/Å between k-points in reciprocal space.",
         )
        
-=======
-            default=lambda: orm.Float(0.401),
-            required=False,
-            help="The minimum desired distance in 1/Å between k-points in reciprocal space.",
-        )
->>>>>>> 0528fd4 (changing name)
         spec.input(
             "pseudo_family",
             valid_type=orm.Str,
@@ -289,7 +225,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             required=False,
             help="The label of the pseudo family",
         )
-<<<<<<< HEAD
         spec.input(
             "charge_supercell",
             valid_type=orm.Bool,
@@ -304,9 +239,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             required=False,
             help="To relax the forces on the input unit structure or not",
         )
-=======
-
->>>>>>> 0528fd4 (changing name)
         spec.expose_inputs(
             PwBaseWorkChain,
             namespace="pwscf",
@@ -336,20 +268,12 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                     cls.inspect_relax
                 ),
             cls.init_supcell_gen,
-<<<<<<< HEAD
             cls.run_pw_double_scf,
-=======
-            cls.run_pw_scf,
->>>>>>> 0528fd4 (changing name)
             cls.inspect_run_get_forces,
             while_(cls.continue_iter)(
                 cls.increment_n_by_one,
                 if_(cls.iteration_num_not_exceeded)(
-<<<<<<< HEAD
                     cls.get_larger_cell, cls.run_pw_double_scf, cls.inspect_run_get_forces
-=======
-                    cls.get_larger_cell, cls.run_pw_scf, cls.inspect_run_get_forces
->>>>>>> 0528fd4 (changing name)
                 ).else_(
                     cls.exit_max_iteration_exceeded,
                 ),
@@ -392,13 +316,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         relax_unitcell: bool = False, 
         options = None,
         min_length: float = None,
-<<<<<<< HEAD
         conv_thr: float = 0.0257,
         kpoints_distance: float = 0.301,
         charge_supercell: bool = True,
-=======
-        kpoints_distance: float = 0.401,
->>>>>>> 0528fd4 (changing name)
         pseudo_family: str ="SSSP/1.2/PBE/efficiency",
         max_iter_num: int = 4,
         **kwargs,
@@ -413,13 +333,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         :param options: A dictionary of options that will be recursively set for the ``metadata.options`` input of all
             the ``CalcJobs`` that are nested in this workchain.
         :param min_length: The minimum length of the smallest lattice vector for the first generated supercell.
-<<<<<<< HEAD
         :param conv_thr: The force convergence threshold in eV/Ang, default is 1e-3 au or 0.0257 ev/A
         :param kpoints_distance: the minimum desired distance in 1/Å between k-points in reciprocal space.
         :param charge_supercell: the charge in the supercell. Default is false as here we don't care about the muon charge state.
-=======
-        :param kpoints_distance: the minimum desired distance in 1/Å between k-points in reciprocal space.
->>>>>>> 0528fd4 (changing name)
         :param pseudo_family: the label of the pseudo family.
         :param max_iter_num: Maximum number of iteration in the supercell convergence loop.
         :return: a process builder instance with all inputs defined ready for launch.
@@ -442,7 +358,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                     "parameters": {
                 "CONTROL": {
                     "tprnfor": True,
-<<<<<<< HEAD
                     },
                 #"SYSTEM": {
                 #    "tot_charge":1 if charge_supercell else 0,
@@ -451,10 +366,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                     'electron_maxstep': 200,
                     'mixing_beta': 0.3,
                 }
-=======
-                    "nstep": 200
-                    },
->>>>>>> 0528fd4 (changing name)
                       },
                     },
             },
@@ -462,22 +373,14 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             }
 
         overrides_pwscf = recursive_merge(overrides, overrides_all)
-<<<<<<< HEAD
                 
-=======
-        
->>>>>>> 0528fd4 (changing name)
         builder_pwscf = PwBaseWorkChain.get_builder_from_protocol(
                 pw_code,
                 structure,
                 protocol=protocol,
                 overrides=overrides_pwscf.get("base",None),
                 #overrides=overrides_pwscf,
-<<<<<<< HEAD
                 pseudo_family=pseudo_family,
-=======
-                #pseudo_family=pseudo_family,
->>>>>>> 0528fd4 (changing name)
                 **kwargs,
                 )
         
@@ -492,14 +395,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 pw_code,
                 structure,
                 protocol=protocol,
-<<<<<<< HEAD
                 #overrides=overrides_pwscf, #IJO, we don't ever want total charge=1.0 for the unitcell relax without muon
                 overrides=overrides_pwscf.get("pre_relax",None),
                 pseudo_family=pseudo_family,
-=======
-                overrides=overrides_pwscf,
-                #pseudo_family=pseudo_family,
->>>>>>> 0528fd4 (changing name)
                 relax_type=RelaxType.POSITIONS, #Infinite dilute defect
                 **kwargs,
                 )
@@ -513,19 +411,13 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         
         #we can set this also wrt to some protocol
         builder.min_length=orm.Float(min_length)
-<<<<<<< HEAD
         builder.conv_thr=orm.Float(conv_thr)
-=======
->>>>>>> 0528fd4 (changing name)
         builder.kpoints_distance=orm.Float(kpoints_distance)
         builder.max_iter_num=orm.Int(max_iter_num)
         
         builder.structure = structure
         builder.pseudo_family = orm.Str(pseudo_family)
-<<<<<<< HEAD
         builder.charge_supercell = orm.Bool(charge_supercell)
-=======
->>>>>>> 0528fd4 (changing name)
         
         return builder
     
@@ -540,12 +432,9 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
 
         inputs = AttributeDict(self.exposed_inputs(PwRelaxWorkChain, namespace='relax'))
         inputs.structure = self.inputs.structure
-<<<<<<< HEAD
         inputs.base.pw.pseudos = get_pseudos(
             inputs.structure, self.inputs.pseudo_family.value
         )
-=======
->>>>>>> 0528fd4 (changing name)
         
         inputs.metadata.call_link_label = f'relax_step'
 
@@ -582,7 +471,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         result_ini = init_supcgen(self.ctx.structure, self.inputs.min_length)
 
         self.ctx.sup_struc_mu = result_ini["SC_struc"]
-<<<<<<< HEAD
         self.ctx.sup_struc_without_mu = result_ini["SC_struc_without_mu"]
         self.ctx.musite = result_ini["Vor_site"]
         self.ctx.sc_mat = result_ini["SCmat"]
@@ -594,15 +482,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         if hasattr(self.inputs,"charge_supercell"):
             inputs.pw.parameters = update_charge(inputs.pw.parameters,self.inputs.charge_supercell)  
                   
-=======
-        self.ctx.musite = result_ini["Vor_site"]
-        self.ctx.sc_mat = result_ini["SCmat"]
-
-    def run_pw_scf(self):
-        """Input Qe-pw structure and run pw"""
-        inputs = AttributeDict(self.exposed_inputs(PwBaseWorkChain, namespace="pwscf"))
-
->>>>>>> 0528fd4 (changing name)
         inputs.pw.structure = self.ctx.sup_struc_mu
         inputs.pw.pseudos = get_pseudos(
             self.ctx.sup_struc_mu, self.inputs.pseudo_family.value
@@ -611,7 +490,6 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
             self.ctx.sup_struc_mu, self.inputs.kpoints_distance.value
         )
 
-<<<<<<< HEAD
         runs = {}
         runs["with_muon"] = self.submit(PwBaseWorkChain, **inputs)
         self.report(f"running SCF calculation with muon: {runs['with_muon'].pk}")
@@ -641,38 +519,15 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
                 return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
             else:
                 self.ctx.traj_out[run] = calculation.outputs.output_trajectory
-=======
-        running = self.submit(PwBaseWorkChain, **inputs)
-        self.report(f"running SCF calculation {running.pk}")
-
-        return ToContext(calculation_run=running)
-
-    def inspect_run_get_forces(self):
-        """Inspect pw run and get forces"""
-        calculation = self.ctx.calculation_run
-
-        if not calculation.is_finished_ok:
-            self.report(
-                f"PwBaseWorkChain<{calculation.pk}> failed"
-                "with exit status {calculation.exit_status}"
-            )
-            return self.exit_codes.ERROR_SUB_PROCESS_FAILED_SCF
-        else:
-            self.ctx.traj_out = calculation.outputs.output_trajectory
->>>>>>> 0528fd4 (changing name)
 
     def continue_iter(self):
         """check convergence and decide if to continue the loop"""
         try:
-<<<<<<< HEAD
             if not "conv_thr" in self.ctx: self.ctx.conv_thr = self.inputs.conv_thr
             conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu,
                                               self.ctx.traj_out["with_muon"],
                                               self.ctx.traj_out["without_muon"],
                                               self.ctx.conv_thr)
-=======
-            conv_res = check_if_conv_achieved(self.ctx.sup_struc_mu, self.ctx.traj_out)
->>>>>>> 0528fd4 (changing name)
             return conv_res.value == False
         except:
             self.report(
@@ -696,10 +551,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         )
 
         self.ctx.sup_struc_mu = result_reini["SC_struc"]
-<<<<<<< HEAD
         self.ctx.sup_struc_without_mu = result_reini["SC_struc_without_mu"]
-=======
->>>>>>> 0528fd4 (changing name)
         self.ctx.sc_mat = result_reini["SCmat"]
 
     def exit_max_iteration_exceeded(self):
@@ -715,12 +567,7 @@ class IsolatedImpurityWorkChain(ProtocolMixin, WorkChain):
         self.report("Setting Outputs")
         self.out("Converged_supercell", self.ctx.sup_struc_mu)
         self.out("Converged_SCmatrix", self.ctx.sc_mat)
-<<<<<<< HEAD
     
-=======
-        
-
->>>>>>> 0528fd4 (changing name)
 
 # Functions for the input validation.
 def iterdict(d,key):
@@ -784,7 +631,6 @@ def input_validator(inputs,_,caller="IsolatedImpurityWorkChain"):
             raise ValueError('\n'+inconsistency+'\n Please check the inputs of your MusConvWorkChain instance or use "get_builder_from_protocol()" method to populate correctly the inputs.\n')
     
     return #cannot return anything otherwise it Raise an error.
-<<<<<<< HEAD
 
 @calcfunction
 def update_charge(parameters,charge):
@@ -792,5 +638,3 @@ def update_charge(parameters,charge):
     parameters = parameters.get_dict()
     parameters["SYSTEM"]["tot_charge"] = 1 if charge else 0
     return orm.Dict(dict=parameters)
-=======
->>>>>>> 0528fd4 (changing name)
