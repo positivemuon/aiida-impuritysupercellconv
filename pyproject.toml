@@ -8,7 +8,7 @@ dynamic = ["version"] # read from aiida_impuritysupercellconv/__init__.py
 description = "aiida-impuritysupercellconv is a plugin that allows to obtain converged supercell size for an interstitial impurity calculation."
 authors = [{name = "Muon group Parma"},{name = "Laboratory for Materials Simulations PSI"}]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = {file = "LICENSE.txt"}
 classifiers = [
     "Programming Language :: Python",
     "Intended Audience :: Science/Research",
