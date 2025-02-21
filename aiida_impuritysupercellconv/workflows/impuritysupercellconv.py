@@ -16,7 +16,7 @@ from .utils import ChkConvergence, ScGenerators
 from aiida.orm import StructureData as LegacyStructureData
 from aiida_quantumespresso.data.hubbard_structure import HubbardStructureData
 
-from aiida_muon.workflows.utils import check_get_hubbard_u_parms
+from aiida_muon.utils.hubbard import check_get_hubbard_u_parms
 from aiida_quantumespresso.common.hubbard import Hubbard
 
 StructureData = DataFactory("atomistic.structure")
